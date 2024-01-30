@@ -1,67 +1,117 @@
 # cfCNV
-After working with the data and understanding the data type, we have decided to apply a benchmarking analysis to identify the optimum pipeline for CNV calling in the area of long read cfDNA data. To fulfill this objective we need to find a proper dataset along with most related CNV callers. 
-Here is the table for the datasets:
+Our main idea: 
+Benchmarking the CNV calling pipeline in the area of cfDNA genomic data
+Here, we first start with germline variants and will continue with somatic variants in the next step. and about the data, it is genomic NGS data including both short and long reads. short read sequencing data is the one that obtained from illumina sequencing and the long read sequencing is related to PacBio or Oxford Nanopore.
+
+Real dataset: 
+for cfDNA illumina sequencing data: http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE71378
+
+for cfDNA PacBio sequencing data: https://ega-archive.org/studies/EGAS00001006609
+
+for cfDNA Oxford Nanopore sequencing data: https://ega-archive.org/studies/EGAS00001004975
+
+Groundtruth  dataset:
+ the groundtruth data like NA12878 is not available for cfDNA data. But there is database of related dataset which can be used for more analysis :
+https://generegulation.org/cfdna/
+
+
+Validation data:
+the simulation can be used to validate the benchmarking result. a CNV simulator to manipulate a real cfDNA bam file will be implemented and used for further confirmation
+and also there are some read visualizing tools that can help to validate the result of CNV callers. these tools are:
+Manual assessment of individual candidate SVs remains critical, with many groups using Integrated Genome Viewer (IGV), or more specialized tools including svviz, SplitThreader, Ribbon , or SVPV
+and also using public databases:
+Very recently, the most comprehensive resource of small and large CNVs derived from WGS is from the Genome Aggregation Database (gnomAD), which was established using numerous CNV and SV callers.
+https://www.internationalgenome.org/human-genome-structural-variation-consortium/
+
+
+there are few benchmarking articles that can be considered for further investigation:
+https://www.nature.com/articles/s41587-020-0538-8
+https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02636-8
+
+
+Genomic Tools or Methods:
+three different main pipelines will be considered for the above-mentioned datasets
+
+
+Run Benchmarking Experiments:
+
+the Nextflow will be used to implement the pipelines all together.
+
+Evaluation Metrics:
+
+#################################################################################
+tools installation
+
+ichorCNA:
+$ git clone https://github.com/broadinstitute/ichorCNA.git
+$ R CMD INSTALL ichorCNA 
+$ git clone https://github.com/shahcompbio/hmmcopy_utils.git
+$ cd hmmcopy_utils
+$ cmake . 
+$ make
+$ cd bin
+$ ./readCounter --window 1000000 --quality 20 --chromosome "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X,Y" ~/Documents/tutoring/IH03_filtered.bam > IH03.wig
+$ cd --
+$ cd ichorCNA
+$ Rscript scripts/runIchorCNA.R --id IH03 --WIG IH03.wig --ploidy "c(2,3)" --normal "c(0.5,0.6,0.7,0.8,0.9)" --maxCN 5 --gcWig inst/extdata/gc_hg19_1000kb.wig --mapWig inst/extdata/map_hg19_1000kb.wig --centromere inst/extdata/GRCh37.p13_centromere_UCSC-gapTable.txt --normalPanel inst/extdata/HD_ULP_PoN_1Mb_median_normAutosome_mapScoreFiltered_median.rds --includeHOMD False --chrs "1" --estimateNormal True --estimatePloidy True --estimateScPrevalence True --scStates "c(1,3)" --txnE 0.9999 --txnStrength 10000 --outDir ./
+
+ Spectre 
+
+$ git clone https://github.com/fritzsedlazeck/Spectre.git
+$ wget https://github.com/brentp/mosdepth/releases/download/v0.3.4/mosdepth && chmod +x ./mosdepth && ./mosdepth -h
+$ ./mosdepth -n --fast-mode --by 1000 IH03_1000 IH03.bam  
+$ mv  IH03_1000.* mosdepth-0.3.4/IH03_1000
+$ python3 spectre.py  CNVCaller  --bin-size 1000  --coverage mosdepth-0.3.4/IH03_1000/ --sample-id IH03_1000 --output-dir IH03_1000-res/ --reference hs37d5.fa.gz
+WisecondorX:
+
+first run : $ 
+```
+pip install -U git+https://github.com/CenterForMedicalGeneticsGhent/WisecondorX
+```
+
+b then install the R packages in R 
+
+the commands to run it:
+https://github.com/CenterForMedicalGeneticsGhent/WisecondorX?tab=readme-ov-file
 
 
 
-Here is the table of the selected tools:
+QDNAseq:
+It is a r package and can be installed in R:
+```
+BiocManager::install("QDNAseq")
+```
+
+```
+BiocManager::install("QDNAseq.hg19")
+```
 
 
-Copy number variation (CNV) calling in the context of long-read circulating cell-free DNA (cfDNA) data involves identifying alterations in the number of copies of genomic segments in the cfDNA samples. Long-read sequencing technologies, such as those provided by platforms like Oxford Nanopore or PacBio, offer advantages in resolving complex genomic regions, including those with repetitive elements. Here's a general guide on CNV calling in long-read cfDNA data:
 
-Preprocessing:
-Read Alignment:
 
-Align long reads to a reference genome using long-read aligners (e.g., Minimap2 for Oxford Nanopore reads or NGMLR for PacBio reads).
-Quality control and filtering are crucial to ensure only high-quality alignments are considered.
-Data Normalization:
+BIC-seq2:
 
-Normalize read counts across samples to account for differences in sequencing depth.
-CNV Calling:
-Depth-of-Coverage Analysis:
+ first download the script for normalization and unzip it;
+$ wget https://compbio.med.harvard.edu/BIC-seq/NBICseq-norm_v0.2.4.tar.gz
+$  tar xvzf NBICseq-norm_v0.2.4.tar.gz
+$ cd NBICseq-norm_v0.2.4/
+$ make clean
+$ make
+then the same for the segmentation part which is for the CNV calling;
+$ wget https://compbio.med.harvard.edu/BIC-seq/NBICseq-seg_v0.7.2.tar.gz
+$ tar xvzf NBICseq-seg_v0.7.2.tar.gz 
+$ cd NBICseq-seg_v0.7.2/
+$ make clean
+$ make
 
-Utilize tools that estimate the depth of coverage at each genomic position.
-Deviations from the expected coverage can indicate CNVs.
-Read Depth-Based CNV Detection:
 
-Algorithms like CNVnator or FREEC can be adapted for long-read data.
-These tools analyze changes in read depth across the genome to identify CNVs.
-Split-Read Analysis:
 
-Long reads can span the breakpoints of CNVs.
-Tools like Sniffles (for structural variant detection) can be useful.
-Assembly-Based Approaches:
+#############################################################
+Investigating the data
+ first the data was downloaded from different studies and the bam files were checked for their genome reference, which is hg19 for all.
+$samtools view -H M12741R.cutadapter4.blasr.bam |grep '^@SQ'c
+and then checking the chromosome length with https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&chromInfoPage=
 
-Perform de novo assembly of long reads to identify structural variations, including CNVs.
-Tools like Canu or Flye can be used for assembly.
-Combine Multiple Signals:
+# View basic statistics of BAM file
 
-Integrate multiple signals, including read depth, split-reads, and assembly information, to increase sensitivity and accuracy.
-Post-Processing:
-Filtering:
-
-Apply filters to reduce false positives.
-Consider removing CNVs in regions prone to mapping errors or artifacts.
-Annotation:
-
-Annotate detected CNVs with genomic features to prioritize biologically relevant events.
-Validation:
-Validation Experiments:
-
-Validate predicted CNVs using orthogonal methods, such as quantitative PCR (qPCR) or digital droplet PCR (ddPCR).
-Comparison with Short-Read Data:
-
-Validate CNVs using data generated from short-read sequencing platforms.
-Challenges and Considerations:
-Noise and Errors:
-
-Long-read data may have higher error rates. Quality filtering is crucial.
-Computational Resources:
-
-Analyzing long-read data requires significant computational resources.
-Integration with Other Omics Data:
-
-Consider integrating CNV data with other omics data for a comprehensive analysis.
-Biological Interpretation:
-
-Interpret detected CNVs in the context of the specific biological question or disease under investigation.
+$ samtools stats your_file.bam
