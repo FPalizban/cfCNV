@@ -4,7 +4,7 @@ FROM mambaorg/micromamba:1.5.10
 COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yml /tmp/env.yml
 RUN micromamba install -y -n base -f /tmp/env.yml && micromamba clean -a -y
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
-ARG LYCEUM_COMMIT=6e843329f0792e10275b0b00b561edaf0ebbc5c5
+ARG LYCEUM_COMMIT=a5a8b073af9cc4da4ded4dff53e8d896b308982c
 USER root
 ENV PATH=/opt/conda/bin:$PATH LYCEUM_DIR=/opt/LYCEUM
 RUN pip install --no-cache-dir torch==1.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html \

@@ -85,7 +85,7 @@ With GRCh37 sizes, the truth generator reproduces the published Simulation 1 tru
 | Spectre | 0.2.1 | mosdepth 100-kb coverage, `--cancer`, min. CNV length max(bin, 50 kb) | `--spectre_bin`, `--blacklist` |
 | CNV-MEANN | Python port of the published network | 500-kb bins; 4 features → 15 tanh units → 3 classes; trained by the workflow | `--cnvmeann_bin` |
 | dudeML | commit a4c7c0b | 1-Mb windows, 5 flanking windows, random forest (RFC100) per depth; trained by the workflow | `--dudeml_bin` |
-| LYCEUM | commit 6e84332, released weights | hg38 exon targets (lifted one-to-one to GRCh37 when needed), exon calls merged into segments | – |
+| LYCEUM | commit a5a8b07, released weights | hg38 exon targets (lifted one-to-one to GRCh37 when needed), exon calls merged into segments | – |
 | ACE | Bioconductor | cellularity at ploidy 2 and free ploidy, from QDNAseq segments | `--tf_methods` |
 | Fragle | commit 3212220 | raw WGS mode (paired-end BAMs) | `--tf_methods` |
 
