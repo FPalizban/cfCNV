@@ -10,7 +10,8 @@ ENV PATH=/opt/conda/bin:$PATH LYCEUM_DIR=/opt/LYCEUM
 RUN pip install --no-cache-dir torch==1.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html \
  && pip install --no-cache-dir numpy==1.18.5 pandas==1.0.5 scikit-learn==0.23.1 tensorflow-cpu==2.2.0 \
         protobuf==3.20.3 einops==0.3.0 local-attention==1.1.1 tqdm==4.66.2 \
- && git clone https://github.com/ciceklab/LYCEUM.git /opt/LYCEUM && cd /opt/LYCEUM && git checkout ${LYCEUM_COMMIT} && rm -rf .git \
+ && python -c "import urllib.request, tarfile, io, sys; c=sys.argv[1]; d=urllib.request.urlopen('https://github.com/ciceklab/LYCEUM/archive/'+c+'.tar.gz').read(); tarfile.open(fileobj=io.BytesIO(d)).extractall('/opt')" ${LYCEUM_COMMIT} \
+ && mv /opt/LYCEUM-${LYCEUM_COMMIT} /opt/LYCEUM && test -s /opt/LYCEUM/models/lyceum_model.pt \
  && chmod -R a+rX /opt/LYCEUM \
  && python -c "import torch, tensorflow, einops, local_attention, sklearn; print('torch', torch.__version__, 'tf', tensorflow.__version__)" \
  && cd /opt/LYCEUM/scripts && python -c "import performer_pytorch; print('LYCEUM modules import')"
