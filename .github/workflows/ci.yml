@@ -1,0 +1,35 @@
+# Checks on every push / pull request: unit tests of the helper scripts and a stub run of every mode
+# (stub = the workflow logic without running the tools; takes about a minute).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pandas numpy pytest
+      - name: Unit tests (bin/ scripts)
+        run: pytest -q tests
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: nf-core/setup-nextflow@v2
+        with: { version: "24.10.4" }
+      - name: Stub run - call mode
+        run: nextflow run main.nf -profile test -stub
+      - name: Stub run - simulate mode
+        run: nextflow run main.nf -profile test -stub --mode simulate --sim_replicates 2 --sim_depths 0.1,1 --outdir res_sim
+      - name: Stub run - mix mode
+        run: |
+          touch T.bam T.bam.bai N.bam N.bam.bai
+          nextflow run main.nf -profile test -stub --mode mix --tumour_bam T.bam --normal_bam N.bam \
+            --tumour_depth 4 --normal_depth 12 --mix_fractions 0,0.05 --mix_depths 1 --outdir res_mix
+      - name: Stub run - score mode
+        run: |
+          printf "1\t10000000\t11000000\tloss\n" > my.bed
+          nextflow run main.nf -profile test -stub --mode score --calls my.bed --truth assets/truth/rep1.truth.tsv --outdir res_score

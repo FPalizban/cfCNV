@@ -1,0 +1,9 @@
+{
+  "title": "cfCNV: a benchmark of copy-number callers for low-pass cell-free DNA sequencing",
+  "upload_type": "software",
+  "license": "MIT",
+  "creators": [
+    {"name": "Palizban, Fahimeh", "affiliation": "Children's Hospital of Philadelphia"}
+  ],
+  "keywords": ["cell-free DNA", "copy-number alteration", "benchmark", "Nextflow", "liquid biopsy"]
+}

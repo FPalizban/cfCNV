@@ -1,0 +1,653 @@
+<title>cfCNV Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one long instrument page. Sticky nav; each section = a bench with a control strip and a live readout.
+   The genome read-depth track (log2 ratio across chr1-22) is the visual signature. */
+:root{
+  --bg:#f5f6f9; --surface:#ffffff; --sunk:#eceef4; --ink:#151b2c; --muted:#5a6377; --line:#d9dde7;
+  --accent:#6a4ea0; --accent-ink:#ffffff; --accent-soft:#ece6f7;
+  --gain:#c2410c; --loss:#1d63b8; --ok:#2e7d5b; --warn:#a15c00; --truth:#6a4ea0;
+  --chr-a:#ffffff; --chr-b:#f0f2f7; --dot:#2a3247;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1320; --surface:#161c2b; --sunk:#1c2334; --ink:#e7eaf2; --muted:#9aa3b7; --line:#2b3347;
+  --accent:#a68be0; --accent-ink:#120c20; --accent-soft:#2a2240;
+  --gain:#f2875a; --loss:#6aa7ec; --ok:#5cc497; --warn:#e3a54a; --truth:#c3b0ef;
+  --chr-a:#161c2b; --chr-b:#1b2233; --dot:#c9d0e0; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0e1320; --surface:#161c2b; --sunk:#1c2334; --ink:#e7eaf2; --muted:#9aa3b7; --line:#2b3347;
+  --accent:#a68be0; --accent-ink:#120c20; --accent-soft:#2a2240;
+  --gain:#f2875a; --loss:#6aa7ec; --ok:#5cc497; --warn:#e3a54a; --truth:#c3b0ef;
+  --chr-a:#161c2b; --chr-b:#1b2233; --dot:#c9d0e0; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font:15px/1.55 var(--f-body); margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(2.2rem,5.2vw,3.9rem);font-weight:800;line-height:1.02}
+h2{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:700;line-height:1.1}
+h3{font-size:1.08rem;font-weight:600}
+p{margin:0;max-width:68ch}
+a{color:var(--accent)}
+.eyebrow{font:500 .72rem/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono)}
+.num{font-variant-numeric:tabular-nums}
+nav.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.top .wrap{display:flex;align-items:center;gap:18px;height:54px;overflow-x:auto;scrollbar-width:none}
+nav.top .brand{font:800 1.15rem var(--f-display);color:var(--ink);text-decoration:none;white-space:nowrap}
+nav.top .brand span{color:var(--accent)}
+nav.top a.l{color:var(--muted);text-decoration:none;font-size:.88rem;white-space:nowrap;padding:6px 2px;border-bottom:2px solid transparent}
+nav.top a.l:hover,nav.top a.l:focus-visible{color:var(--ink);border-color:var(--accent);outline:none}
+section{padding-block:56px;border-bottom:1px solid var(--line)}
+.sec-head{display:grid;gap:10px;margin-bottom:24px}
+.hero{padding-block:40px 18px;border-bottom:none}
+.hero-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:36px;align-items:end}
+.hero p.lede{font-size:1.12rem;color:var(--muted);margin-top:14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.stats div{background:var(--surface);padding:14px 14px 12px}
+.stats b{display:block;font:700 1.6rem/1 var(--f-display)}
+.stats span{font-size:.78rem;color:var(--muted)}
+.bench{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.controls{display:flex;flex-wrap:wrap;gap:18px 28px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.ctl{display:grid;gap:6px;min-width:180px;flex:1}
+.ctl label{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.ctl label output{font:500 .85rem var(--f-mono);color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.readout{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.readout div{background:var(--surface);padding:10px 14px}
+.readout b{display:block;font:600 1.05rem var(--f-mono)}
+.readout span{font-size:.74rem;color:var(--muted)}
+.canvas-box{position:relative;padding:8px 10px 4px}
+canvas{display:block;width:100%}#track{height:300px}#ideo{height:150px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.78rem;color:var(--muted);padding:0 18px 12px}
+.sw{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.note{font-size:.8rem;color:var(--muted);padding:10px 18px 14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .8rem var(--f-body);padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chip:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;padding:0 10px}
+.tab{background:none;border:none;border-bottom:2px solid transparent;padding:12px 12px 10px;font:500 .9rem var(--f-body);color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.panel{padding:18px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.two>*{min-width:0}
+svg text{fill:var(--muted);font:11px var(--f-body)}
+svg .ax{stroke:var(--line)}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;position:relative}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;text-align:left;font:inherit;color:inherit;display:grid;gap:6px;align-content:start;min-width:0}
+.step[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:var(--accent-soft)}
+.step .k{font:500 .7rem var(--f-mono);color:var(--accent);letter-spacing:.1em}
+.step b{font:600 1rem var(--f-display)}
+.step small{color:var(--muted);font-size:.78rem}
+.step-detail{margin-top:14px;padding:18px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);display:grid;grid-template-columns:1.2fr 1fr;gap:24px}
+.step-detail>*{min-width:0}
+.step-detail ul{margin:8px 0 0;padding-left:18px}
+.step-detail li{margin:3px 0}
+.flowline{display:block;width:100%;height:26px;margin-top:6px}@media (max-width:900px){.flowline{display:none}}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{font-weight:500;color:var(--muted);font-size:.76rem;text-transform:uppercase;letter-spacing:.06em}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-mono)}
+.scroll{overflow-x:auto}
+textarea{width:100%;min-height:150px;font:12.5px/1.45 var(--f-mono);padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);color:var(--ink);resize:vertical}
+select,.btn{font:500 .88rem var(--f-body);padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn{cursor:pointer;display:inline-block}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pill{display:inline-block;font:500 .72rem var(--f-mono);padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.pill.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.pill.bad{background:color-mix(in srgb,var(--gain) 16%,transparent);color:var(--gain)}
+.big3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.big3 div{background:var(--sunk);border-radius:8px;padding:12px}
+.big3 b{display:block;font:700 1.7rem/1.1 var(--f-display)}
+.reco{display:grid;grid-template-columns:320px 1fr;gap:22px}
+.reco>*{min-width:0}
+.reco .ask{display:grid;gap:16px;align-content:start}
+.reco fieldset{border:none;padding:0;margin:0;display:grid;gap:8px}
+.reco legend{font-size:.8rem;color:var(--muted);margin-bottom:6px}
+.answer{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:14px}
+.answer h3{font-size:1.4rem}
+.answer .why li{margin:5px 0}
+pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:14px;overflow-x:auto;font:12.5px/1.55 var(--f-mono);margin:0}
+footer{padding-block:34px 60px;color:var(--muted);font-size:.84rem}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);font:12px var(--f-mono);padding:5px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-120%)}
+@media (max-width:900px){
+  .hero-grid,.two,.step-detail,.reco{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .readout{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .big3{grid-template-columns:1fr 1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<nav class="top" aria-label="Sections"><div class="wrap">
+  <a class="brand" href="#top">cf<span>CNV</span></a>
+  <a class="l" href="#signal">The signal</a>
+  <a class="l" href="#pipeline">How it works</a>
+  <a class="l" href="#results">Results</a>
+  <a class="l" href="#score">Score your caller</a>
+  <a class="l" href="#choose">Choose a tool</a>
+  <a class="l" href="#run">Run it</a>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap hero-grid">
+  <div>
+    <div class="eyebrow">Benchmark · cell-free DNA · copy number</div>
+    <h1 style="margin-top:12px">Which copy-number caller can you trust in cfDNA?</h1>
+    <p class="lede">cfCNV tests classical and machine-learning CNV/CNA callers on low-pass cell-free DNA, using simulated events with known truth, NIST HG008 tumour–normal mixtures, and real plasma. Explore how depth, tumour fraction and bin size change what a caller can see, then score your own calls against the same truth.</p>
+  </div>
+  <div class="stats" aria-label="Benchmark size">
+    <div><b class="num">8</b><span>callers (5 classical, 3 ML)</span></div>
+    <div><b class="num">114</b><span>Simulation 1 BAMs, 0.1–20×</span></div>
+    <div><b class="num">104</b><span>HG008 mixtures, 0–30% tumour</span></div>
+    <div><b class="num">25</b><span>non-cancer plasma samples</span></div>
+  </div>
+</div></header>
+
+<section id="signal" style="padding-top:22px"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">01 · The signal</div>
+    <h2>A tumour copy-number change is a small shift buried in counting noise</h2>
+    <p class="muted">Every caller reads the same thing: how many reads fall in each genomic bin, relative to the expectation. Move the sliders to see how sequencing depth, tumour fraction and bin size decide whether a change stands out. This is a teaching model with Poisson counting noise and smooth GC-like waves, segmented with a simple binary-segmentation caller.</p>
+  </div>
+  <div class="bench">
+    <div class="controls">
+      <div class="ctl"><label for="sDepth">Sequencing depth <output id="oDepth">0.5×</output></label><input id="sDepth" type="range" min="0" max="6" step="1" value="2"></div>
+      <div class="ctl"><label for="sTF">Tumour fraction <output id="oTF">10%</output></label><input id="sTF" type="range" min="0" max="6" step="1" value="4"></div>
+      <div class="ctl"><label for="sBin">Bin size <output id="oBin">100 kb</output></label><input id="sBin" type="range" min="0" max="4" step="1" value="2"></div>
+      <div class="ctl" style="flex:0 0 auto;align-content:end"><button class="btn" id="reseed" type="button">New noise draw</button></div>
+    </div>
+    <div class="canvas-box"><canvas id="track" height="300" aria-label="Simulated genome-wide log2 copy-number ratio"></canvas><div class="tip" id="trackTip" hidden></div></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--dot)"></i>bin log2 ratio</span>
+      <span><i class="sw" style="background:var(--truth)"></i>expected signal at this tumour fraction</span>
+      <span><i class="sw" style="background:var(--gain)"></i>called gain</span>
+      <span><i class="sw" style="background:var(--loss)"></i>called loss</span>
+    </div>
+    <div class="readout">
+      <div><b id="rReads" class="num">–</b><span>reads per bin</span></div>
+      <div><b id="rNoise" class="num">–</b><span>noise (log2 SD per bin)</span></div>
+      <div><b id="rShift" class="num">–</b><span>shift of a one-copy loss</span></div>
+      <div><b id="rFound" class="num">–</b><span>true events detected</span></div>
+      <div><b id="rFalse" class="num">–</b><span>false calls</span></div>
+    </div>
+    <p class="note" id="signalNote"></p>
+  </div>
+</div></section>
+
+<section id="pipeline"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">02 · How the benchmark works</div>
+    <h2>Three layers of truth, one scoring framework</h2>
+    <p class="muted">Select a stage to see what happens there and the numbers behind it.</p>
+  </div>
+  <div class="flow" id="flow" role="group" aria-label="Pipeline stages"></div>
+  <svg class="flowline" id="flowline" viewBox="0 0 1000 26" preserveAspectRatio="none" aria-hidden="true"></svg>
+  <div class="step-detail" id="stepDetail" aria-live="polite"></div>
+</div></section>
+
+<section id="results"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">03 · Results</div>
+    <h2>What each caller recovered, and what it invented</h2>
+    <p class="muted">All values are medians from the benchmark runs. Toggle callers on the chart legends.</p>
+  </div>
+  <div class="bench">
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" aria-selected="true" data-t="sim1">Simulated events</button>
+      <button class="tab" role="tab" aria-selected="false" data-t="hg008">HG008 tumour mixtures</button>
+      <button class="tab" role="tab" aria-selected="false" data-t="healthy">Real non-cancer plasma</button>
+      <button class="tab" role="tab" aria-selected="false" data-t="cost">Runtime and memory</button>
+    </div>
+    <div class="panel" id="p-sim1" role="tabpanel">
+      <div class="chips" id="sim1chips" style="margin-bottom:12px"></div>
+      <div class="two">
+        <div><h3>Event F1 by sequencing depth</h3><p class="muted" style="font-size:.82rem">Primary configuration of each caller; 30 events per BAM, one-to-one matching at reciprocal overlap ≥ 0.5.</p><div id="chSim1Depth"></div></div>
+        <div><h3>Detection by event size (0.1–1×)</h3><p class="muted" style="font-size:.82rem">Fraction of simulated events found, by event length.</p><div id="chSim1Size"></div></div>
+      </div>
+      <div class="scroll" style="margin-top:18px"><table id="tbSim1"></table></div>
+    </div>
+    <div class="panel" id="p-hg008" role="tabpanel" hidden>
+      <div class="two">
+        <div>
+          <h3>Recovery of the tumour profile</h3>
+          <p class="muted" style="font-size:.82rem">Median correlation between called and true copy-number profile (2,333 1-Mb windows).</p>
+          <div class="ctl" style="max-width:340px;margin:10px 0"><label for="sHgDepth">Depth <output id="oHgDepth">0.5×</output></label><input id="sHgDepth" type="range" min="0" max="6" step="1" value="2"></div>
+          <div id="chHeat"></div>
+        </div>
+        <div>
+          <h3>Limit of detection</h3>
+          <p class="muted" style="font-size:.82rem">Lowest tumour fraction at which every replicate exceeded the pure-normal null (classical callers). ML callers and Spectre needed ≥10–30%.</p>
+          <div id="chLod"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel" id="p-healthy" role="tabpanel" hidden>
+      <div class="chips" id="hlvl" style="margin-bottom:12px">
+        <button class="chip" aria-pressed="true" data-l="full">Native depth (3–12×)</button>
+        <button class="chip" aria-pressed="false" data-l="d1">1×</button>
+        <button class="chip" aria-pressed="false" data-l="d0p1">0.1×</button>
+      </div>
+      <div class="two">
+        <div><h3>Genome called altered in people without cancer</h3><p class="muted" style="font-size:.82rem">Each dot is one of 25 individuals (PRJNA795275). Every call here is a false positive or a germline variant.</p><div id="chHealthy"></div></div>
+        <div><h3>Tumour fraction reported at 0% tumour</h3><p class="muted" style="font-size:.82rem">Native depth. ichorCNA stays near zero; Fragle tracks fragment length, not tumour DNA.</p><div id="chTF"></div></div>
+      </div>
+    </div>
+    <div class="panel" id="p-cost" role="tabpanel" hidden>
+      <div class="two">
+        <div><h3>Wall time per run</h3><p class="muted" style="font-size:.82rem">Median minutes per BAM and configuration (Slurm accounting), log scale.</p><div id="chTime"></div></div>
+        <div><h3>Peak memory per run</h3><p class="muted" style="font-size:.82rem">Median GB; whiskers to the maximum observed.</p><div id="chMem"></div></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section id="score"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">04 · Score your caller</div>
+    <h2>Run your tool on our truth, paste the calls, see where it lands</h2>
+    <p class="muted">Simulation 1 replicates contain 30 known events each (GRCh37, 50 kb–50 Mb, gains and losses). Paste your calls as BED-like lines: <span class="mono">chrom start end type</span>, where type is gain/loss (dup, amp, del, or a copy number also work). Scoring runs in your browser; nothing is uploaded.</p>
+  </div>
+  <div class="bench">
+    <div class="controls">
+      <div class="ctl" style="max-width:240px"><label for="selTruth">Truth set</label><select id="selTruth"><option value="rep1">Replicate 1 (30 events)</option><option value="rep2">Replicate 2</option><option value="rep3">Replicate 3</option><option value="rep4">Replicate 4</option><option value="rep5">Replicate 5</option></select></div>
+      <div class="ctl" style="max-width:260px"><label for="sRO">Reciprocal overlap <output id="oRO">0.50</output></label><input id="sRO" type="range" min="0.1" max="0.9" step="0.05" value="0.5"></div>
+      <div class="ctl" style="max-width:260px"><label for="sCmp">Compare at depth <output id="oCmp">0.5×</output></label><input id="sCmp" type="range" min="0" max="7" step="1" value="2"></div>
+    </div>
+    <div class="panel two">
+      <div style="display:grid;gap:10px;align-content:start">
+        <label for="calls" class="muted" style="font-size:.8rem">Your calls <span class="pill" id="exampleTag">example calls loaded</span></label>
+        <textarea id="calls" spellcheck="false"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="btnScore" type="button">Score calls</button>
+          <button class="btn" id="btnExample" type="button">Load example</button>
+          <label class="btn" for="fileCalls" style="cursor:pointer">Open file…</label><input id="fileCalls" type="file" accept=".bed,.tsv,.txt,.csv" hidden>
+        </div>
+        <p class="muted" style="font-size:.78rem">The example is a synthetic call set made for this demo from replicate 1: some events found with shifted breakpoints, some missed, and three false calls.</p>
+      </div>
+      <div style="display:grid;gap:14px;align-content:start;min-width:0">
+        <div class="big3"><div><b id="mF1" class="num">–</b><span class="muted">F1</span></div><div><b id="mP" class="num">–</b><span class="muted">precision</span></div><div><b id="mR" class="num">–</b><span class="muted">recall</span></div></div>
+        <div class="muted num" id="mCounts" style="font-size:.85rem"></div>
+        <div id="chCompare"></div>
+      </div>
+    </div>
+    <div class="canvas-box" style="padding:0 18px 10px"><canvas id="ideo" height="150" aria-label="Truth events and your calls along the genome"></canvas></div>
+    <div class="scroll" style="padding:0 18px 18px"><table id="tbEvents"></table></div>
+  </div>
+</div></section>
+
+<section id="choose"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">05 · Choose a tool</div>
+    <h2>A recommendation built from the benchmark</h2>
+    <p class="muted">Pick your setting. The suggestion and its evidence come directly from the results above.</p>
+  </div>
+  <div class="reco">
+    <form class="ask" id="recoForm">
+      <fieldset><legend>What do you need?</legend>
+        <div class="chips" data-q="goal">
+          <button type="button" class="chip" aria-pressed="true" data-v="profile">Genome-wide CNA profile</button>
+          <button type="button" class="chip" aria-pressed="false" data-v="tf">Tumour fraction</button>
+          <button type="button" class="chip" aria-pressed="false" data-v="small">Small events (&lt;1 Mb)</button>
+          <button type="button" class="chip" aria-pressed="false" data-v="screen">Screening (few false alarms)</button>
+        </div></fieldset>
+      <fieldset><legend>Sequencing depth</legend>
+        <div class="chips" data-q="depth">
+          <button type="button" class="chip" aria-pressed="false" data-v="low">≈0.1×</button>
+          <button type="button" class="chip" aria-pressed="true" data-v="mid">0.25–1×</button>
+          <button type="button" class="chip" aria-pressed="false" data-v="high">&gt;1×</button>
+        </div></fieldset>
+      <fieldset><legend>Expected tumour fraction</legend>
+        <div class="chips" data-q="tf">
+          <button type="button" class="chip" aria-pressed="false" data-v="vlow">&lt;2%</button>
+          <button type="button" class="chip" aria-pressed="true" data-v="lowmid">2–10%</button>
+          <button type="button" class="chip" aria-pressed="false" data-v="high">&gt;10%</button>
+          <button type="button" class="chip" aria-pressed="false" data-v="germ">Germline (100%)</button>
+        </div></fieldset>
+    </form>
+    <div class="answer" id="answer" aria-live="polite"></div>
+  </div>
+</div></section>
+
+<section id="run"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">06 · Run it</div>
+    <h2>Reproduce the benchmark</h2>
+    <p class="muted">The workflow, containers and benchmark files are being packaged for release with the paper. Until then the repository holds the per-tool scripts used for the runs shown here.</p>
+  </div>
+  <div class="two">
+    <div style="display:grid;gap:10px;min-width:0">
+      <h3>Planned interface</h3>
+      <pre id="cmd">nextflow run FPalizban/cfCNV \
+  -profile docker,slurm \
+  --input samples.csv \
+  --genome GRCh38 \
+  --callers qdnaseq,ichorcna,bicseq2,cnvkit,spectre \
+  --truth truth.bed \
+  --outdir results/</pre>
+      <div><button class="btn" id="copyCmd" type="button">Copy command</button> <span class="muted" id="copied" style="font-size:.8rem"></span></div>
+    </div>
+    <div style="display:grid;gap:10px;align-content:start;min-width:0">
+      <h3>Data used</h3>
+      <table>
+        <tr><td>Simulation 1 backgrounds</td><td>Snyder et al. 2016, IH01–IH03 (GSE71378)</td></tr>
+        <tr><td>Tumour–normal mixtures</td><td>NIST Cancer GIAB HG008-T / HG008-N</td></tr>
+        <tr><td>Non-cancer plasma</td><td>PRJNA795275 (EPIC-seq), 25 WGS samples</td></tr>
+        <tr><td>Cancer plasma</td><td>GSE71378 stage IV cancers (analysis in progress)</td></tr>
+      </table>
+      <p><a href="https://github.com/FPalizban/cfCNV" target="_blank" rel="noopener">github.com/FPalizban/cfCNV</a></p>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p>cfCNV · Palizban F, Taklifi P, … Glessner J, Hakonarson H, Dessimoz C, Majidian S. Manuscript in preparation. Results shown are from the benchmark runs of October 2026.</p>
+</div></footer>
+<script type="application/json" id="cfcnv-data">{"sim1_depths":[0.1,0.25,0.5,1.0,2.0,5.0,10.0,20.0],"sim1":{"QDNAseq":{"bin":50000,"F1_by_depth":[0.667,0.706,0.706,0.706,0.467,0.514,0.473,0.162],"F1":0.71,"precision":0.86,"recall":0.6,"fp_per_Gb":1.0,"ml":false},"ichorCNA":{"bin":1000000,"F1_by_depth":[0.462,0.462,0.462,0.462,0.462,0.462,0.462,0.462],"F1":0.46,"precision":1.0,"recall":0.3,"fp_per_Gb":0.0,"ml":false},"BIC-seq2":{"bin":30000,"F1_by_depth":[0.557,0.494,0.457,0.347,0.153,0.103,0.08,0.011],"F1":0.45,"precision":0.33,"recall":0.67,"fp_per_Gb":15.3,"ml":false},"CNV-MEANN":{"bin":500000,"F1_by_depth":[0.449,0.449,0.449,0.449,0.442,0.444,0.437,0.417],"F1":0.45,"precision":0.58,"recall":0.33,"fp_per_Gb":0.0,"ml":true},"dudeML":{"bin":1000000,"F1_by_depth":[0.407,0.4,0.414,0.373,0.408,0.4,0.43,0.375],"F1":0.4,"precision":0.47,"recall":0.37,"fp_per_Gb":3.8,"ml":true},"CNVkit":{"bin":100000,"F1_by_depth":[0.326,0.341,0.326,0.333,0.333,0.32,0.331,0.281],"F1":0.34,"precision":0.58,"recall":0.23,"fp_per_Gb":1.6,"ml":false},"Spectre":{"bin":500000,"F1_by_depth":[0.222,0.235,0.229,0.235,0.27,0.27,0.253,0.324],"F1":0.23,"precision":0.75,"recall":0.13,"fp_per_Gb":0.0,"ml":false},"LYCEUM":{"bin":0,"F1_by_depth":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"F1":0.0,"precision":0.0,"recall":0.0,"fp_per_Gb":114.4,"ml":true}},"sim1_bins":[10000,30000,50000,100000,500000,1000000],"sim1_bin_F1":{"QDNAseq":[0.67,0.7,0.71,0.66,0.41,0.32],"ichorCNA":[null,null,null,null,0.46,0.46],"BIC-seq2":[0.42,0.45,0.43,0.39,0.38,0.33],"CNV-MEANN":[0.0,0.01,0.02,0.11,0.45,0.42],"dudeML":[0.01,0.03,0.06,0.13,0.36,0.4],"CNVkit":[0.28,0.3,0.33,0.34,0.24,0.23],"Spectre":[0.02,0.09,0.14,0.19,0.23,0.18]},"sim1_sizes":[50000,100000,250000,500000,1000000,5000000,10000000,25000000,50000000],"sim1_size_recall":{"QDNAseq":[0.0,0.02,0.5,0.83,0.8,0.8,0.9,0.91,1.0],"ichorCNA":[0.0,0.0,0.0,0.0,0.0,0.8,0.9,0.9,1.0],"BIC-seq2":[0.3,0.39,0.64,0.82,0.82,0.75,0.92,0.79,0.84],"CNV-MEANN":[0.0,0.0,0.0,0.0,0.43,0.79,0.86,0.74,0.9],"dudeML":[0.0,0.0,0.0,0.09,0.38,0.8,1.0,0.89,1.0],"CNVkit":[0.0,0.0,0.07,0.19,0.33,0.28,0.44,0.64,0.9],"Spectre":[0.0,0.0,0.0,0.0,0.0,0.06,0.42,0.73,0.91],"LYCEUM":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"sim2_depths":[0.1,0.25,0.5,1,2,5,10],"sim2_fracs":[0.0,0.01,0.02,0.05,0.1,0.2,0.3],"sim2_r":{"BIC-seq2":{"0.0":[0.009,0.028,0.002,0.026,-0.001,0.034,0.014],"0.01":[0.112,0.105,0.088,0.101,0.11,0.113,0.12],"0.02":[0.07,0.178,0.141,0.172,0.191,0.191,0.234],"0.05":[0.317,0.389,0.336,0.387,0.424,0.426,0.426],"0.1":[0.605,0.716,0.65,0.696,0.698,0.648,0.674],"0.2":[0.811,0.859,0.874,0.892,0.9,0.854,0.89],"0.3":[0.87,0.934,0.931,0.934,0.936,0.928,null]},"CNV-MEANN":{"0.0":[0.017,0.02,0.025,0.023,0.019,0.022,0.021],"0.01":[0.032,0.025,0.023,0.024,0.022,0.021,0.024],"0.02":[0.047,0.029,0.023,0.024,0.022,0.02,0.023],"0.05":[0.117,0.021,0.025,0.028,0.031,0.027,0.028],"0.1":[0.188,0.053,0.03,0.033,0.029,0.029,0.031],"0.2":[0.349,0.108,0.055,0.041,0.04,0.037,0.036],"0.3":[0.487,0.212,0.169,0.133,0.118,0.099,null]},"CNVkit":{"0.0":[0.052,0.052,0.043,0.049,0.051,0.046,0.047],"0.01":[0.095,0.089,0.084,0.081,0.081,0.083,0.083],"0.02":[0.112,0.129,0.121,0.12,0.118,0.122,0.117],"0.05":[0.236,0.224,0.234,0.231,0.22,0.227,0.227],"0.1":[0.361,0.385,0.39,0.39,0.413,0.387,0.387],"0.2":[0.646,0.666,0.666,0.667,0.667,0.666,0.666],"0.3":[0.735,0.796,0.797,0.792,0.793,0.794,null]},"LYCEUM":{"0.0":[0.019,0.007,0.023,0.014,0.014,0.042,0.07],"0.01":[-0.088,-0.024,-0.014,0.016,0.029,-0.007,-0.011],"0.02":[-0.051,-0.025,-0.016,-0.019,0.033,-0.003,0.011],"0.05":[-0.026,-0.018,0.015,0.008,0.05,0.006,-0.004],"0.1":[-0.018,0.009,0.022,0.026,0.049,0.006,0.004],"0.2":[-0.013,0.015,0.039,0.039,0.051,0.033,0.027],"0.3":[0.006,0.018,0.022,0.024,0.045,0.04,null]},"QDNAseq":{"0.0":[0.022,-0.099,-0.187,-0.177,0.012,-0.091,-0.05],"0.01":[0.132,0.196,0.262,0.225,0.29,0.356,0.354],"0.02":[0.287,0.423,0.443,0.442,0.473,0.492,0.514],"0.05":[0.521,0.557,0.571,0.607,0.637,0.884,0.882],"0.1":[0.565,0.614,0.661,0.882,0.902,0.91,0.912],"0.2":[0.614,0.873,0.906,0.916,0.916,0.916,0.914],"0.3":[0.907,0.913,0.918,0.919,0.92,0.917,null]},"Spectre":{"0.0":[0.022,0.008,0.021,0.009,0.009,-0.011,-0.016],"0.01":[0.0,0.05,0.006,0.001,0.019,0.017,0.004],"0.02":[0.0,0.03,0.017,-0.004,0.021,0.021,0.018],"0.05":[0.0,0.028,0.058,0.012,0.015,0.039,0.03],"0.1":[0.026,0.056,0.06,0.072,0.049,0.109,0.089],"0.2":[0.0,0.069,0.102,0.134,0.149,0.138,0.138],"0.3":[0.019,0.116,0.156,0.232,0.244,0.255,null]},"dudeML":{"0.0":[0.082,0.085,0.086,0.092,0.09,0.088,0.073],"0.01":[0.09,0.088,0.091,0.092,0.088,0.085,0.078],"0.02":[0.093,0.09,0.09,0.093,0.091,0.087,0.075],"0.05":[0.113,0.096,0.097,0.095,0.093,0.09,0.086],"0.1":[0.154,0.112,0.104,0.1,0.096,0.096,0.09],"0.2":[0.242,0.179,0.153,0.158,0.151,0.162,0.152],"0.3":[0.364,0.279,0.254,0.25,0.219,0.248,null]},"ichorCNA":{"0.0":[-0.016,0.001,-0.154,-0.086,0.014,0.02,0.025],"0.01":[0.068,0.078,0.169,0.131,0.079,0.237,0.241],"0.02":[0.06,0.344,0.41,0.381,0.4,0.535,0.478],"0.05":[0.477,0.573,0.705,0.749,0.747,0.766,0.785],"0.1":[0.705,0.785,0.829,0.857,0.878,0.877,0.884],"0.2":[0.852,0.893,0.888,0.879,0.885,0.884,0.884],"0.3":[0.888,0.898,0.896,0.888,0.886,0.895,null]}},"sim2_lod":{"BIC-seq2":{"0.1":0.05,"0.25":0.01,"0.5":0.02,"1.0":0.01,"2.0":0.01,"5.0":0.01,"10.0":0.01},"CNV-MEANN":{"0.1":0.02,"0.25":0.2,"0.5":0.2,"1.0":0.2,"2.0":0.2,"5.0":0.2,"10.0":0.2},"CNVkit":{"0.1":0.01,"0.25":0.01,"0.5":0.01,"1.0":0.01,"2.0":0.01,"5.0":0.01,"10.0":0.01},"LYCEUM":{"0.1":null,"0.25":null,"0.5":null,"1.0":null,"2.0":null,"5.0":null,"10.0":null},"QDNAseq":{"0.1":0.05,"0.25":0.01,"0.5":0.01,"1.0":0.02,"2.0":0.01,"5.0":0.01,"10.0":0.01},"Spectre":{"0.1":null,"0.25":0.3,"0.5":0.2,"1.0":0.2,"2.0":0.2,"5.0":0.1,"10.0":0.1},"dudeML":{"0.1":0.05,"0.25":0.1,"0.5":0.2,"1.0":0.2,"2.0":0.2,"5.0":0.2,"10.0":0.2},"ichorCNA":{"0.1":0.05,"0.25":0.02,"0.5":0.02,"1.0":0.02,"2.0":0.02,"5.0":0.01,"10.0":0.01}},"runtime":[{"tool":"ACE","sim":"Sim2","med_min":0.18,"p90_min":0.22,"med_gb":0.5,"max_gb":0.54,"n":312},{"tool":"BIC-seq2","sim":"Sim1","med_min":62.52,"p90_min":67.74,"med_gb":3.55,"max_gb":3.55,"n":684},{"tool":"BIC-seq2","sim":"Sim2","med_min":64.82,"p90_min":99.37,"med_gb":3.59,"max_gb":3.6,"n":624},{"tool":"CNV-MEANN","sim":"Sim1","med_min":3.05,"p90_min":26.04,"med_gb":1.58,"max_gb":4.65,"n":685},{"tool":"CNV-MEANN","sim":"Sim2","med_min":2.35,"p90_min":7.85,"med_gb":2.27,"max_gb":4.75,"n":624},{"tool":"CNVkit","sim":"Sim1","med_min":1.55,"p90_min":7.58,"med_gb":0.37,"max_gb":0.85,"n":684},{"tool":"CNVkit","sim":"Sim2","med_min":0.98,"p90_min":3.69,"med_gb":0.27,"max_gb":0.81,"n":624},{"tool":"LYCEUM","sim":"Sim1","med_min":13.73,"p90_min":22.51,"med_gb":3.46,"max_gb":3.51,"n":114},{"tool":"LYCEUM","sim":"Sim2","med_min":18.32,"p90_min":44.28,"med_gb":3.77,"max_gb":21.73,"n":104},{"tool":"QDNAseq","sim":"Sim1","med_min":1.38,"p90_min":11.74,"med_gb":0.97,"max_gb":17.73,"n":685},{"tool":"QDNAseq","sim":"Sim2","med_min":0.91,"p90_min":4.65,"med_gb":0.66,"max_gb":5.86,"n":624},{"tool":"Spectre","sim":"Sim1","med_min":28.71,"p90_min":48.78,"med_gb":1.9,"max_gb":2.6,"n":684},{"tool":"Spectre","sim":"Sim2","med_min":14.92,"p90_min":22.12,"med_gb":1.9,"max_gb":2.52,"n":624},{"tool":"dudeML","sim":"Sim1","med_min":1.15,"p90_min":1.36,"med_gb":0.52,"max_gb":1.65,"n":865},{"tool":"dudeML","sim":"Sim2","med_min":0.89,"p90_min":2.66,"med_gb":0.58,"max_gb":1.61,"n":624},{"tool":"ichorCNA","sim":"Sim1","med_min":0.88,"p90_min":4.94,"med_gb":0.84,"max_gb":0.88,"n":423},{"tool":"ichorCNA","sim":"Sim2","med_min":2.25,"p90_min":5.38,"med_gb":0.85,"max_gb":0.92,"n":312}],"healthy_fga":{"QDNAseq":{"config":"100kb","full":[1.016,0.132,0.0,0.0,0.0,0.351,0.0,0.351,0.779,0.0,0.0,0.278,0.0,0.0,2.115,0.0,0.056,0.0,0.0,0.0,0.313,0.807,0.0,0.198,0.946],"d1":[0.122,2.344,0.0,0.0,0.0,1.388,0.47,0.0,0.95,0.0,0.0,0.146,1.357,0.15,0.143,0.0,0.056,1.447,0.243,0.0,1.322,0.0,0.254,0.0,2.824],"d0p1":[0.0,0.0,0.0,0.0,0.0,0.104,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.059,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"Spectre":{"config":"100kb","full":[0.219,0.271,0.372,0.609,1.325,0.212,0.463,0.205,0.626,0.202,1.228,0.209,0.195,0.501,0.198,0.285,0.268,0.163,0.974,0.859,0.264,1.944,0.557,0.369,0.452],"d1":[0.278,0.073,0.306,0.508,2.063,0.233,0.894,0.108,0.477,0.153,0.713,0.296,0.205,0.16,0.198,0.25,0.268,0.111,0.967,0.612,0.563,1.614,0.435,0.323,0.511],"d0p1":[0.146,0.052,0.143,0.157,0.188,0.104,0.094,0.0,0.0,0.0,0.052,0.115,0.163,0.052,0.052,0.139,0.07,0.0,0.122,0.143,0.0,0.111,0.087,0.174,0.052]},"BIC-seq2":{"config":"10kb","full":[1.978,0.938,0.972,0.953,0.965,1.691,1.023,0.839,1.046,0.818,0.975,1.222,0.908,0.918,0.94,0.907,0.868,0.884,0.958,0.969,0.987,1.002,0.881,2.159,1.088],"d1":[0.709,0.703,0.662,0.627,0.877,0.724,0.845,0.581,0.944,0.69,0.741,0.733,0.626,0.686,0.603,0.581,0.685,0.638,0.786,0.716,0.776,0.648,0.583,1.025,0.865],"d0p1":[0.264,0.251,0.25,0.219,0.289,0.446,0.275,0.215,0.439,0.252,0.229,0.316,0.264,0.276,0.284,0.235,0.495,0.266,0.35,0.236,0.273,0.183,0.244,0.338,0.251]},"CNVkit":{"config":"30kb","full":[6.007,11.052,7.055,3.761,6.146,10.933,8.136,4.942,5.518,8.964,2.946,3.505,10.881,10.155,9.789,6.77,6.756,11.555,4.563,4.627,10.101,5.704,8.955,3.823,9.034],"d1":[8.731,8.504,4.727,8.977,6.954,11.433,7.299,7.971,11.648,14.924,8.212,8.241,11.46,10.191,9.831,7.095,9.297,13.347,4.619,11.615,12.135,6.849,12.213,7.955,11.915],"d0p1":[17.75,15.915,16.536,16.569,14.306,15.61,22.595,16.825,11.668,20.397,18.445,16.693,17.094,16.982,20.321,14.958,13.519,17.844,17.562,13.773,15.596,14.326,17.719,13.858,14.287]},"ichorCNA":{"config":"1Mb low-TF","full":[38.783,29.53,8.035,45.843,17.183,26.713,16.939,17.565,30.365,20.07,13.426,21.426,25.357,23.27,11.757,11.2,5.496,33.183,25.948,40.904,39.548,29.426,28.661,44.313,36.209],"d1":[34.365,21.704,14.713,42.365,10.643,24.035,12.904,15.061,27.93,0.0,14.4,8.313,28.8,14.191,12.557,18.748,2.817,32.104,20.661,42.609,41.183,20.939,32.104,21.67,29.565],"d0p1":[23.374,14.435,16.348,6.017,19.026,8.313,18.539,8.313,17.53,7.165,5.739,2.957,21.635,4.87,0.0,19.652,6.017,7.339,8.035,41.704,4.487,12.383,30.852,5.461,30.957]}},"healthy_tf":{"ichorCNA":[1.12,1.88,1.29,1.07,2.5,1.23,1.26,1.38,1.63,1.05,1.53,1.26,2.1,1.14,0.97,1.13,1.02,1.42,1.45,1.1,1.45,1.33,0.83,0.97,1.58],"ACE":[6.0,9.0,5.0,5.0,10.0,12.0,12.0,10.0,7.0,6.0,6.0,6.0,5.0,5.0,9.0,10.0,18.0,5.0,10.0,7.0,10.0,5.0,10.0,8.0,8.0],"Fragle":[25.23,27.5,23.57,27.66,27.89,24.81,23.38,24.76,24.2,23.93,21.62,17.45,24.23,20.43,22.03,21.69,26.78,22.85,20.68,29.17,23.15,22.47,23.22,18.09,23.06]},"truth":{"rep1":[["1",156360671,156610671,"gain"],["1",202860555,203110555,"loss"],["2",45021183,50021183,"loss"],["2",104407322,129407322,"gain"],["2",209182854,209232854,"loss"],["4",102350456,152350456,"gain"],["4",168153299,173153299,"gain"],["4",175803459,176303459,"loss"],["5",31751607,32251607,"loss"],["5",149607296,159607296,"gain"],["6",114167240,114217240,"gain"],["7",6519970,11519970,"loss"],["7",29501186,29551186,"gain"],["9",63325441,63825441,"gain"],["10",51786472,52786472,"gain"],["11",31921878,41921878,"loss"],["12",80728049,80828049,"loss"],["13",16981404,17981404,"loss"],["14",22229049,72229049,"loss"],["14",82762414,87762414,"gain"],["14",97203320,97703320,"gain"],["15",34263092,59263092,"loss"],["16",30171490,30421490,"gain"],["17",24951002,25201002,"loss"],["18",42345103,43345103,"gain"],["18",55641367,55691367,"loss"],["19",10052098,11052098,"loss"],["19",18360126,18460126,"loss"],["20",8404023,8504023,"gain"],["21",31905598,32005598,"gain"]],"rep2":[["2",30751547,40751547,"gain"],["2",69969649,70069649,"loss"],["2",137237969,162237969,"loss"],["3",32182145,33182145,"loss"],["3",138014257,143014257,"gain"],["3",145790302,146290302,"loss"],["4",120089608,170089608,"gain"],["5",79476234,79526234,"loss"],["6",105565253,155565253,"loss"],["8",15831552,15931552,"gain"],["8",43601051,43651051,"gain"],["9",8472760,33472760,"gain"],["10",67576241,68076241,"loss"],["10",98977479,99977479,"gain"],["13",47041138,52041138,"loss"],["14",8741324,8991324,"loss"],["14",16965901,17965901,"gain"],["14",73467313,73567313,"gain"],["15",88522205,89522205,"loss"],["16",22046256,22096256,"gain"],["17",61539244,61589244,"loss"],["18",17025707,27025707,"loss"],["19",15905930,16155930,"gain"],["19",42331196,42581196,"gain"],["19",48920777,49420777,"gain"],["20",15391494,20391494,"gain"],["20",32971183,37971183,"loss"],["21",11251934,11351934,"loss"],["21",23853455,24353455,"gain"],["22",13697870,13947870,"loss"]],"rep3":[["3",84214420,84464420,"loss"],["4",36727293,86727293,"gain"],["5",73414384,78414384,"gain"],["5",110236168,111236168,"loss"],["6",11783778,36783778,"loss"],["7",40685011,50685011,"gain"],["7",58317403,63317403,"gain"],["9",59271118,64271118,"loss"],["9",65963107,75963107,"loss"],["11",9205744,10205744,"gain"],["11",13865331,13965331,"gain"],["11",35783595,36283595,"loss"],["11",83029481,83279481,"gain"],["12",34724621,34774621,"gain"],["13",8479685,8579685,"loss"],["13",13146560,14146560,"gain"],["13",32211964,57211964,"gain"],["13",62334934,67334934,"loss"],["14",35964486,85964486,"loss"],["15",64957913,65007913,"loss"],["15",72455554,72555554,"gain"],["16",72377559,72477559,"loss"],["16",80005164,80055164,"loss"],["17",9428804,9678804,"loss"],["18",5113706,5613706,"gain"],["18",13224205,13724205,"gain"],["18",21144292,22144292,"loss"],["18",65848902,65898902,"gain"],["21",20332242,20582242,"gain"],["22",41114438,41614438,"loss"]],"rep4":[["1",36636996,37136996,"loss"],["1",39292089,39542089,"loss"],["1",43437315,43687315,"gain"],["1",71420608,72420608,"loss"],["1",129492244,154492244,"gain"],["1",232143571,233143571,"gain"],["5",29923877,30173877,"gain"],["5",112515311,162515311,"loss"],["5",170956314,171056314,"loss"],["6",68113838,78113838,"gain"],["6",135991529,140991529,"loss"],["7",96682028,96782028,"loss"],["10",79124504,80124504,"gain"],["12",14220972,14320972,"gain"],["13",43280105,48280105,"loss"],["13",64069401,74069401,"loss"],["14",19272375,19322375,"loss"],["14",21233182,21733182,"gain"],["14",45656899,46156899,"gain"],["14",70910016,75910016,"gain"],["15",12853242,17853242,"gain"],["15",22689164,47689164,"loss"],["16",11780063,12780063,"loss"],["17",36667473,36917473,"loss"],["17",48571597,49071597,"loss"],["18",12997848,62997848,"gain"],["20",41218249,41268249,"gain"],["21",9077697,9177697,"gain"],["21",17603820,17653820,"gain"],["22",39149206,39199206,"loss"]],"rep5":[["2",84721969,84971969,"loss"],["2",96316772,96566772,"gain"],["3",84211163,84711163,"loss"],["4",9934247,34934247,"gain"],["7",14900199,15150199,"loss"],["9",36158335,36658335,"gain"],["9",61261778,66261778,"loss"],["9",111268515,116268515,"loss"],["10",52975666,53025666,"gain"],["10",85060090,110060090,"loss"],["11",73204484,83204484,"gain"],["12",50940687,100940687,"loss"],["12",113345308,113445308,"gain"],["12",118324217,119324217,"loss"],["13",29296643,79296643,"gain"],["15",64641318,74641318,"loss"],["16",17758770,18258770,"loss"],["16",21451236,21551236,"gain"],["16",32453155,33453155,"loss"],["16",58571584,58621584,"loss"],["18",8164558,9164558,"gain"],["18",29007915,29107915,"loss"],["18",60103487,60153487,"gain"],["19",26735486,26835486,"loss"],["19",47797023,47847023,"loss"],["20",31391478,32391478,"gain"],["20",36775925,41775925,"gain"],["21",13238955,13738955,"gain"],["22",25509180,30509180,"gain"],["22",43940436,44190436,"gain"]]}}</script>
+<script>
+(function(){
+"use strict";
+const D = JSON.parse(document.getElementById('cfcnv-data').textContent);
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const TOOLC = {"QDNAseq":"#0072B2","CNVkit":"#E69F00","ichorCNA":"#009E73","BIC-seq2":"#D55E00","Spectre":"#CC79A7","dudeML":"#56B4E9","CNV-MEANN":"#882255","LYCEUM":"#6A3D9A","ACE":"#8c8c8c","Fragle":"#CC79A7"};
+const darkTool = {"CNV-MEANN":"#d36b9a","LYCEUM":"#a78bd8","QDNAseq":"#3d9ad6"};
+const isDark = () => tok('--bg').toLowerCase() === '#0e1320';
+const tc = t => (isDark() && darkTool[t]) || TOOLC[t] || '#888';
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
+function svg(w,h,host){ host.innerHTML=''; const s=el('svg',{viewBox:`0 0 ${w} ${h}`,width:'100%',role:'img'}); host.appendChild(s); return s; }
+function txt(s,x,y,t,a){ const e=el('text',Object.assign({x,y},a||{}),s); e.textContent=t; return e; }
+function rng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+/* ---------------- 01 signal simulator ---------------- */
+const CHR=[249,243,198,191,181,171,159,146,141,135,135,133,115,107,102,90,81,78,59,63,48,51].map(m=>m*1e6);
+const OFF=[]; let G=0; CHR.forEach((L,i)=>{OFF[i]=G; G+=L;});
+const EV=[ // [chr(1-based), start, end, CN, label]
+ [1,125e6,249e6,3,'1q gain'],[2,60e6,60.5e6,1,'500-kb loss'],[3,0,90e6,1,'3p loss'],[7,55e6,56e6,3,'1-Mb gain'],
+ [8,45e6,146e6,4,'8q gain'],[9,20e6,23e6,0,'9p21 deletion'],[12,68e6,72e6,6,'12q15 amplification'],
+ [13,19e6,115e6,1,'13q loss'],[17,0,22e6,1,'17p loss'],[18,0,78e6,1,'chr18 loss'],[20,28e6,63e6,3,'20q gain']];
+const DEPTHS=[0.1,0.25,0.5,1,2,5,10], TFS=[0,1,2,5,10,20,30], BINS=[10e3,30e3,100e3,500e3,1e6];
+const fmtBin=b=>b>=1e6?(b/1e6)+' Mb':(b/1e3)+' kb';
+let seed=11, simCache=null;
+function cnAt(c,p){ for(const e of EV){ if(e[0]===c && p>=e[1] && p<e[2]) return e[3]; } return 2; }
+function poisson(l,r){ if(l<30){ const L=Math.exp(-l); let k=0,p=1; do{k++; p*=r();}while(p>L); return k-1; }
+  let u=r()||1e-9, v=r(); return Math.max(0,Math.round(l+Math.sqrt(l)*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v))); }
+function waves(r){ // smooth GC-like factor on a 50-kb grid
+  const n=Math.ceil(G/5e4), w=new Float32Array(n); let x=0; for(let i=0;i<n;i++){ const u=r()||1e-9,v=r(); x=0.97*x+0.0065*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); w[i]=x; } return w; }
+function simulate(){
+  const depth=DEPTHS[+$('#sDepth').value], f=TFS[+$('#sTF').value]/100, bin=BINS[+$('#sBin').value];
+  const r=rng(seed), W=waves(rng(seed*7+3));
+  const lam=depth*bin/150, chrBins=[], X=[], Y=[], E=[];
+  for(let c=0;c<22;c++){ const nb=Math.floor(CHR[c]/bin), ys=new Float32Array(nb), es=new Float32Array(nb);
+    for(let i=0;i<nb;i++){ const p=(i+0.5)*bin, cn=cnAt(c+1,p), ratio=((1-f)*2+f*cn)/2, g=Math.exp(W[Math.min(W.length-1,Math.floor((OFF[c]+p)/5e4))]);
+      const k=poisson(lam*ratio*g,r); ys[i]=Math.log2((k+0.5)/(lam+0.5)); es[i]=Math.log2(Math.max(ratio,1e-3)); }
+    chrBins.push({ys,es,nb}); }
+  // median-centre
+  const all=[]; chrBins.forEach(b=>{ for(let i=0;i<b.nb;i+=Math.max(1,Math.floor(b.nb/400))) all.push(b.ys[i]); });
+  all.sort((a,b)=>a-b); const med=all[all.length>>1]; chrBins.forEach(b=>{ for(let i=0;i<b.nb;i++) b.ys[i]-=med; });
+  // noise from successive differences (MAD)
+  const d=[]; chrBins.forEach(b=>{ for(let i=1;i<b.nb;i+=Math.max(1,Math.floor(b.nb/300))) d.push(Math.abs(b.ys[i]-b.ys[i-1])); });
+  d.sort((a,b)=>a-b); const sd=1.4826*d[d.length>>1]/Math.SQRT2;
+  // binary segmentation per chromosome
+  const segs=[]; const T=6.0, minN=3;
+  chrBins.forEach((b,c)=>{ const cs=new Float64Array(b.nb+1); for(let i=0;i<b.nb;i++) cs[i+1]=cs[i]+b.ys[i];
+    const stack=[[0,b.nb,0]]; const out=[];
+    while(stack.length){ const [a,z,lv]=stack.pop(); const n=z-a; let best=-1,bk=-1;
+      if(n>=2*minN && lv<12){ const tot=cs[z]-cs[a];
+        for(let k=a+minN;k<=z-minN;k++){ const nl=k-a, nr=z-k, ml=(cs[k]-cs[a])/nl, mr=(tot-(cs[k]-cs[a]))/nr; const t=Math.abs(ml-mr)/(sd*Math.sqrt(1/nl+1/nr)); if(t>best){best=t;bk=k;} } }
+      if(best>T){ stack.push([bk,z,lv+1]); stack.push([a,bk,lv+1]); } else out.push([a,z]); }
+    out.sort((p,q)=>p[0]-q[0]);
+    out.forEach(([a,z])=>{ const n=z-a, m=(cs[z]-cs[a])/n; const call = (Math.abs(m)>Math.max(0.05,3.5*sd/Math.sqrt(n)) && n*bin>=150e3) ? (m>0?'gain':'loss') : null;
+      segs.push({c:c+1,s:a*bin,e:z*bin,m,call}); }); });
+  // evaluation
+  const called=segs.filter(s=>s.call); let found=0;
+  const evHit=EV.map(e=>{ const typ=e[3]>2?'gain':'loss'; const L=e[2]-e[1]; let ov=0; called.forEach(s=>{ if(s.c===e[0]&&s.call===typ) ov+=Math.max(0,Math.min(s.e,e[2])-Math.max(s.s,e[1])); }); const hit=f>0&&ov/L>=0.5; if(hit) found++; return hit; });
+  let fals=0; called.forEach(s=>{ let ov=0; EV.forEach(e=>{ const typ=e[3]>2?'gain':'loss'; if(s.c===e[0]&&s.call===typ) ov+=Math.max(0,Math.min(s.e,e[2])-Math.max(s.s,e[1])); }); if(ov/(s.e-s.s)<0.5 || f===0) fals++; });
+  simCache={depth,f,bin,lam,chrBins,segs,sd,found,fals,evHit};
+}
+function drawTrack(){
+  const cv=$('#track'), dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight||300; cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const S=simCache, padL=34, padB=18, pw=w-padL-6, ph=h-padB-8, ymax=0.8;
+  const X=p=>padL+p/G*pw, Y=v=>8+(ymax-Math.max(-ymax,Math.min(ymax,v)))/(2*ymax)*ph;
+  for(let c=0;c<22;c++){ ctx.fillStyle=c%2?tok('--chr-b'):tok('--chr-a'); ctx.fillRect(X(OFF[c]),8,X(OFF[c]+CHR[c])-X(OFF[c]),ph); }
+  ctx.strokeStyle=tok('--line'); ctx.lineWidth=1; [-0.5,0,0.5].forEach(v=>{ ctx.beginPath(); ctx.moveTo(padL,Y(v)); ctx.lineTo(w-6,Y(v)); ctx.stroke(); });
+  ctx.fillStyle=tok('--muted'); ctx.font='11px '+tok('--f-mono'); ctx.textAlign='right'; [-0.5,0,0.5].forEach(v=>ctx.fillText(v,padL-6,Y(v)+4));
+  ctx.textAlign='center'; for(let c=0;c<22;c++){ if(w<520 && c%2) continue; ctx.fillText(c+1,X(OFF[c]+CHR[c]/2),h-4); }
+  // dots
+  const tot=S.chrBins.reduce((a,b)=>a+b.nb,0), step=Math.max(1,Math.floor(tot/(pw*6))), alpha=Math.min(0.75,Math.max(0.12,900/ (tot/step)*0.9));
+  ctx.fillStyle=tok('--dot'); ctx.globalAlpha=Math.max(0.18,alpha);
+  S.chrBins.forEach((b,c)=>{ for(let i=0;i<b.nb;i+=step){ ctx.fillRect(X(OFF[c]+(i+0.5)*S.bin)-0.6,Y(b.ys[i])-0.6,1.3,1.3); } });
+  ctx.globalAlpha=1;
+  // expected
+  ctx.strokeStyle=tok('--truth'); ctx.lineWidth=1.6; ctx.setLineDash([4,3]);
+  S.chrBins.forEach((b,c)=>{ ctx.beginPath(); let prev=null; for(let i=0;i<b.nb;i++){ const x=X(OFF[c]+i*S.bin), y=Y(b.es[i]); if(prev===null){ctx.moveTo(x,y);} else if(b.es[i]!==prev){ ctx.lineTo(x,Y(prev)); ctx.lineTo(x,y);} prev=b.es[i]; } ctx.lineTo(X(OFF[c]+b.nb*S.bin),Y(prev)); ctx.stroke(); });
+  ctx.setLineDash([]);
+  // calls
+  S.segs.forEach(s=>{ if(!s.call) return; ctx.fillStyle=s.call==='gain'?tok('--gain'):tok('--loss'); const x0=X(OFF[s.c-1]+s.s), x1=Math.max(x0+2,X(OFF[s.c-1]+s.e)); ctx.fillRect(x0,Y(s.m)-2.5,x1-x0,5); });
+  const fmt=x=>x.toFixed(x<0.1?3:2);
+  $('#rReads').textContent=S.lam<10?S.lam.toFixed(1):Math.round(S.lam).toLocaleString();
+  $('#rNoise').textContent=S.sd.toFixed(3);
+  const sh=Math.log2((2-S.f)/2); $('#rShift').textContent=S.f?sh.toFixed(3):'0';
+  $('#rFound').textContent=`${S.found} / ${EV.length}`; $('#rFalse').textContent=S.fals;
+  const arm=Math.sqrt(40e6/S.bin), snr=S.f? Math.abs(sh)/S.sd : 0;
+  let msg;
+  if(!S.f) msg=`With no tumour DNA every call is a false positive. ${S.fals? S.fals+' segment'+(S.fals>1?'s':'')+' crossed the calling threshold from noise and coverage waves alone.':'This draw produced no false calls.'}`;
+  else msg=`Each ${fmtBin(S.bin)} bin holds about ${S.lam<10?S.lam.toFixed(1):Math.round(S.lam).toLocaleString()} reads, so a single bin varies by ${S.sd.toFixed(2)} log2 units while a one-copy loss at ${Math.round(S.f*100)}% tumour shifts it by only ${Math.abs(sh).toFixed(3)} (${snr.toFixed(2)}× the noise). Averaging over a 40-Mb arm (${Math.round(arm*arm).toLocaleString()} bins) shrinks the noise ${arm.toFixed(0)}-fold, which is why broad events are found first. Focal events need more reads, and coarser bins help only large events.`;
+  $('#signalNote').textContent=msg;
+}
+function updSim(){ $('#oDepth').textContent=DEPTHS[+$('#sDepth').value]+'×'; $('#oTF').textContent=TFS[+$('#sTF').value]+'%'; $('#oBin').textContent=fmtBin(BINS[+$('#sBin').value]); simulate(); drawTrack(); }
+['#sDepth','#sTF','#sBin'].forEach(s=>$(s).addEventListener('input',updSim));
+$('#reseed').addEventListener('click',()=>{ seed=Math.floor(Math.random()*1e6); updSim(); });
+$('#track').addEventListener('mousemove',ev=>{ const cv=$('#track'), r=cv.getBoundingClientRect(), x=ev.clientX-r.left, padL=34, pw=r.width-padL-6; const p=(x-padL)/pw*G; const tip=$('#trackTip'); if(p<0||p>G){tip.hidden=true;return;}
+  let c=0; while(c<21&&p>OFF[c+1]) c++; const pos=(p-OFF[c])/1e6; const e=EV.find(e=>e[0]===c+1&&pos*1e6>=e[1]&&pos*1e6<e[2]);
+  tip.textContent=`chr${c+1}:${pos.toFixed(1)} Mb${e?' · '+e[4]+' (CN '+e[3]+')':''}`; tip.style.left=x+'px'; tip.style.top=(ev.clientY-r.top)+'px'; tip.hidden=false; });
+$('#track').addEventListener('mouseleave',()=>$('#trackTip').hidden=true);
+
+/* ---------------- 02 pipeline ---------------- */
+const STEPS=[
+ {k:'Stage 1',t:'Data layers',s:'Three kinds of truth',body:`<h3>Three layers, each answering a different question</h3><ul>
+  <li><b>Simulation 1</b>: healthy cfDNA (IH01, IH02, IH03) with 30 inserted gains and losses per replicate (50 kb–50 Mb), 5 replicates, downsampled to 0.1–20×. 114 BAMs with exact truth.</li>
+  <li><b>Simulation 2</b>: NIST HG008 tumour and matched normal mixed at 0–30% tumour DNA and 0.1–10×. 104 mixtures; truth from the NIST somatic copy-number benchmark.</li>
+  <li><b>Real plasma</b>: 25 whole-genome samples from people without cancer (PRJNA795275) as a specificity test, and stage IV cancers (GSE71378).</li></ul>`,
+  side:`<div class="big3"><div><b>114</b><span class="muted">BAMs, known events</span></div><div><b>104</b><span class="muted">tumour mixtures</span></div><div><b>25</b><span class="muted">healthy plasma</span></div></div>`},
+ {k:'Stage 2',t:'Preprocess',s:'Align, deduplicate, downsample',body:`<h3>Same reads in, every caller</h3><ul><li>Alignment (BWA-MEM), duplicate removal and depth verification with mosdepth.</li><li>Random downsampling to fixed depths so depth effects are paired within a sample.</li><li>Each dataset kept in the build of its truth: GRCh37 for Simulation 1 and cancer plasma, GRCh38 for HG008 and PRJNA795275.</li></ul>`,
+  side:`<table><tr><th>Depths</th><td class="mono">0.1, 0.25, 0.5, 1, 2, 5, 10, 20×</td></tr><tr><th>Bins</th><td class="mono">10 kb – 1 Mb</td></tr><tr><th>Tumour</th><td class="mono">0, 1, 2, 5, 10, 20, 30%</td></tr></table>`},
+ {k:'Stage 3',t:'Call',s:'8 callers × 6 bin sizes',body:`<h3>Classical and machine-learning callers</h3><ul><li><b>Classical</b>: QDNAseq, ichorCNA, CNVkit, BIC-seq2, Spectre, plus ACE and Fragle for tumour fraction.</li><li><b>ML</b>: CNV-MEANN and dudeML trained on Simulation 1 with leave-one-replicate-out, and LYCEUM.</li><li>Settings matched to the sample: ichorCNA low-tumour-fraction settings, CNVkit pooled versus flat reference, Spectre germline versus cancer mode.</li></ul>`,
+  side:`<div class="chips">${['QDNAseq','ichorCNA','CNVkit','BIC-seq2','Spectre','CNV-MEANN','dudeML','LYCEUM'].map(t=>`<span class="pill" style="border-left:4px solid ${TOOLC[t]}">${t}</span>`).join('')}</div>`},
+ {k:'Stage 4',t:'Harmonise',s:'One call format',body:`<h3>Every output becomes the same table</h3><p>Segments, VCFs and exon calls are converted to <span class="mono">chrom start end type copy_number</span> on autosomes. Neutral segments are dropped, and adjacent calls of the same direction are merged.</p>`,
+  side:`<pre>1  125000000  249250621  gain  3
+3  0          90000000   loss  1
+9  20000000   23000000   loss  0</pre>`},
+ {k:'Stage 5',t:'Score',s:'Events, bins, profiles',body:`<h3>Metrics for each kind of truth</h3><ul><li><b>Events</b>: one-to-one matching at reciprocal overlap ≥ 0.5 gives precision, recall and F1.</li><li><b>Bins</b>: Matthews correlation on a 10-kb grid.</li><li><b>Profiles</b>: correlation with the true log2 copy-number ratio in 1-Mb windows; limit of detection against the pure-normal null.</li><li><b>Specificity</b>: false calls per Gb and genome falsely altered in negative controls and real healthy plasma.</li></ul>`,
+  side:`<table><tr><th>Statistics</th><td>paired Wilcoxon, Benjamini–Hochberg</td></tr><tr><th>Primary setting</th><td>best bin size per caller</td></tr><tr><th>Cost</th><td>Slurm wall time and peak memory</td></tr></table>`}];
+function drawFlow(active){
+  const f=$('#flow'); f.innerHTML='';
+  STEPS.forEach((s,i)=>{ const b=document.createElement('button'); b.type='button'; b.className='step'; b.setAttribute('aria-pressed',i===active); b.innerHTML=`<span class="k">${s.k}</span><b>${s.t}</b><small>${s.s}</small>`; b.onclick=()=>drawFlow(i); f.appendChild(b); });
+  $('#stepDetail').innerHTML=`<div>${STEPS[active].body}</div><div>${STEPS[active].side}</div>`;
+  const l=$('#flowline'); l.innerHTML=''; el('line',{x1:0,y1:13,x2:1000,y2:13,stroke:tok('--line'),'stroke-width':2},l);
+  el('line',{x1:0,y1:13,x2:(active+0.5)*200,y2:13,stroke:tok('--accent'),'stroke-width':3},l);
+  for(let i=0;i<5;i++) el('circle',{cx:(i+0.5)*200,cy:13,r:i===active?7:4,fill:i<=active?tok('--accent'):tok('--line')},l);
+}
+
+/* ---------------- 03 results charts ---------------- */
+let sim1On=new Set(['QDNAseq','ichorCNA','BIC-seq2','CNVkit','Spectre','CNV-MEANN','dudeML']);
+function lineChart(host, xs, series, o){
+  const w=560,h=300,m={l:44,r:12,t:12,b:36}; const s=svg(w,h,host);
+  const lx=v=>Math.log10(v), x0=lx(xs[0]), x1=lx(xs[xs.length-1]);
+  const X=v=>m.l+(lx(v)-x0)/(x1-x0)*(w-m.l-m.r), Y=v=>m.t+(1-(v-o.ymin)/(o.ymax-o.ymin))*(h-m.t-m.b);
+  for(let v=o.ymin;v<=o.ymax+1e-9;v+=o.ystep){ el('line',{x1:m.l,x2:w-m.r,y1:Y(v),y2:Y(v),class:'ax'},s); txt(s,m.l-6,Y(v)+4,v.toFixed(1),{'text-anchor':'end'}); }
+  xs.forEach(v=>txt(s,X(v),h-m.b+16,v+'×',{'text-anchor':'middle'})); txt(s,(w+m.l)/2,h-4,o.xlab,{'text-anchor':'middle'});
+  txt(s,12,(h-m.b)/2,o.ylab,{'text-anchor':'middle',transform:`rotate(-90 12 ${(h-m.b)/2})`});
+  series.forEach(se=>{ const pts=se.v.map((v,i)=>v==null?null:[X(xs[i]),Y(v)]).filter(Boolean); if(!pts.length) return;
+    el('path',{d:'M'+pts.map(p=>p.join(',')).join('L'),fill:'none',stroke:tc(se.n),'stroke-width':2.2,'stroke-dasharray':se.dash?'5 4':'none'},s);
+    pts.forEach(p=>el('circle',{cx:p[0],cy:p[1],r:3,fill:tc(se.n)},s));
+    const last=pts[pts.length-1]; });
+  return s;
+}
+function drawSim1(){
+  const chips=$('#sim1chips'); chips.innerHTML='';
+  Object.keys(D.sim1).forEach(t=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.setAttribute('aria-pressed',sim1On.has(t)); b.innerHTML=`<i class="sw" style="background:${tc(t)}"></i>${t}`; b.onclick=()=>{ sim1On.has(t)?sim1On.delete(t):sim1On.add(t); drawSim1(); }; chips.appendChild(b); });
+  lineChart($('#chSim1Depth'), D.sim1_depths, Object.entries(D.sim1).filter(([t])=>sim1On.has(t)).map(([t,v])=>({n:t,v:v.F1_by_depth,dash:v.ml})), {ymin:0,ymax:0.8,ystep:0.2,xlab:'Sequencing depth (log scale)',ylab:'Median event F1'});
+  // size
+  const host=$('#chSim1Size'), w=560,h=300,m={l:44,r:12,t:12,b:36}, s=svg(w,h,host), xs=D.sim1_sizes;
+  const X=i=>m.l+i/(xs.length-1)*(w-m.l-m.r), Y=v=>m.t+(1-v)*(h-m.t-m.b);
+  [0,0.25,0.5,0.75,1].forEach(v=>{ el('line',{x1:m.l,x2:w-m.r,y1:Y(v),y2:Y(v),class:'ax'},s); txt(s,m.l-6,Y(v)+4,Math.round(v*100)+'%',{'text-anchor':'end'}); });
+  xs.forEach((v,i)=>txt(s,X(i),h-m.b+16,v>=1e6?(v/1e6)+'M':(v/1e3)+'k',{'text-anchor':'middle'})); txt(s,(w+m.l)/2,h-4,'Simulated event size (bp)',{'text-anchor':'middle'});
+  Object.entries(D.sim1_size_recall).filter(([t])=>sim1On.has(t)).forEach(([t,v])=>{ el('path',{d:'M'+v.map((y,i)=>X(i)+','+Y(y)).join('L'),fill:'none',stroke:tc(t),'stroke-width':2.2,'stroke-dasharray':D.sim1[t].ml?'5 4':'none'},s); v.forEach((y,i)=>el('circle',{cx:X(i),cy:Y(y),r:2.6,fill:tc(t)},s)); });
+  // table
+  const rows=Object.entries(D.sim1).sort((a,b)=>b[1].F1-a[1].F1);
+  $('#tbSim1').innerHTML=`<tr><th>Caller</th><th>Type</th><th>Primary bin</th><th class="n">F1</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">False calls / Gb (negatives)</th></tr>`+
+   rows.map(([t,v])=>`<tr><td><i class="sw" style="background:${tc(t)}"></i>${t}</td><td>${v.ml?'ML':'classical'}</td><td class="mono">${v.bin?fmtBin(v.bin):'exon'}</td><td class="n">${v.F1.toFixed(2)}</td><td class="n">${v.precision.toFixed(2)}</td><td class="n">${v.recall.toFixed(2)}</td><td class="n">${v.fp_per_Gb==null?'–':v.fp_per_Gb}</td></tr>`).join('')+
+   `<tr><td colspan="7" class="muted" style="font-size:.78rem">Matched depth 0.1–1×, 60 BAMs with events. At ≥2× QDNAseq and BIC-seq2 fall in IH01 because of that background's systematic coverage noise.</td></tr>`;
+}
+function drawHeat(){
+  const di=+$('#sHgDepth').value; $('#oHgDepth').textContent=D.sim2_depths[di]+'×';
+  const tools=['QDNAseq','ichorCNA','BIC-seq2','CNVkit','dudeML','CNV-MEANN','Spectre','LYCEUM'].filter(t=>D.sim2_r[t]);
+  const fr=D.sim2_fracs, w=560, cell=Math.min(58,(w-110)/fr.length), h=tools.length*30+44, s=svg(w,h,$('#chHeat'));
+  const acc=tok('--accent'), surf=tok('--surface');
+  fr.forEach((f,j)=>txt(s,110+j*cell+cell/2,h-10,Math.round(f*100)+'%',{'text-anchor':'middle'}));
+  tools.forEach((t,i)=>{ txt(s,102,i*30+24,t,{'text-anchor':'end'});
+    fr.forEach((f,j)=>{ const v=(D.sim2_r[t][String(f)]||[])[di]; const a=v==null?0:Math.max(0,Math.min(1,v));
+      el('rect',{x:110+j*cell+1,y:i*30+6,width:cell-2,height:26,rx:4,fill:acc,'fill-opacity':(0.06+0.94*a).toFixed(2)},s);
+      if(v!=null) txt(s,110+j*cell+cell/2,i*30+23,v.toFixed(2),{'text-anchor':'middle',style:`fill:${a>0.55?surf:tok('--ink')};font-family:var(--f-mono);font-size:11px`}); }); });
+  txt(s,110+fr.length*cell/2,h-0,'',{});
+}
+function drawLod(){
+  const host=$('#chLod'), tools=['QDNAseq','ichorCNA','BIC-seq2','CNVkit'], xs=D.sim2_depths;
+  const w=560,h=300,m={l:48,r:12,t:12,b:36}, s=svg(w,h,host), ys=[0.01,0.02,0.05,0.1];
+  const lx=v=>Math.log10(v), X=v=>m.l+(lx(v)-lx(xs[0]))/(lx(xs[xs.length-1])-lx(xs[0]))*(w-m.l-m.r), Y=v=>m.t+(1-(lx(v)-lx(0.008))/(lx(0.12)-lx(0.008)))*(h-m.t-m.b);
+  ys.forEach(v=>{ el('line',{x1:m.l,x2:w-m.r,y1:Y(v),y2:Y(v),class:'ax'},s); txt(s,m.l-6,Y(v)+4,(v*100)+'%',{'text-anchor':'end'}); });
+  xs.forEach(v=>txt(s,X(v),h-m.b+16,v+'×',{'text-anchor':'middle'})); txt(s,(w+m.l)/2,h-4,'Sequencing depth',{'text-anchor':'middle'});
+  txt(s,12,(h-m.b)/2,'Tumour fraction detected',{'text-anchor':'middle',transform:`rotate(-90 12 ${(h-m.b)/2})`});
+  tools.forEach((t,k)=>{ const v=xs.map(x=>D.sim2_lod[t][String(x)]??D.sim2_lod[t][x.toFixed(1)]); const pts=v.map((y,i)=>y==null?null:[X(xs[i]),Y(y)*1+ (k-1.5)*2.2]).filter(Boolean);
+    el('path',{d:'M'+pts.map(p=>p.join(',')).join('L'),fill:'none',stroke:tc(t),'stroke-width':2.2},s); pts.forEach(p=>el('circle',{cx:p[0],cy:p[1],r:3.2,fill:tc(t)},s)); });
+  const lg=el('g',{},s); tools.forEach((t,k)=>{ el('rect',{x:w-120,y:16+k*16,width:12,height:4,fill:tc(t)},lg); txt(lg,w-104,22+k*16,t+(t==='CNVkit'?' *':''),{}); });
+  txt(s,w-12,h-m.b-6,'* narrow null at 0% tumour',{'text-anchor':'end',style:'font-size:10px'});
+}
+let hl='full';
+function strip(host, groups, o){
+  const w=560,rowH=34,m={l:150,r:16,t:8,b:32}, h=m.t+groups.length*rowH+m.b, s=svg(w,h,host);
+  const sl=v=>o.log? Math.sign(v)*Math.log10(1+Math.abs(v)/o.lin) : v;
+  const X=v=>m.l+(sl(v)-sl(o.min))/(sl(o.max)-sl(o.min))*(w-m.l-m.r);
+  o.ticks.forEach(v=>{ el('line',{x1:X(v),x2:X(v),y1:m.t,y2:h-m.b,class:'ax'},s); txt(s,X(v),h-m.b+14,o.fmt(v),{'text-anchor':'middle'}); }); txt(s,(w+m.l)/2,h-4,o.xlab,{'text-anchor':'middle'});
+  const r=rng(5);
+  groups.forEach((g,i)=>{ const y=m.t+i*rowH+rowH/2; txt(s,m.l-8,y+4,g.label,{'text-anchor':'end'});
+    g.v.forEach(v=>el('circle',{cx:X(Math.min(o.max,v)),cy:y+(r()-0.5)*14,r:3.4,fill:g.c,'fill-opacity':0.7},s));
+    const sv=[...g.v].sort((a,b)=>a-b), med=sv[sv.length>>1]; el('line',{x1:X(med),x2:X(med),y1:y-11,y2:y+11,stroke:tok('--ink'),'stroke-width':2},s); });
+}
+function drawHealthy(){
+  const H=D.healthy_fga;
+  strip($('#chHealthy'), Object.entries(H).map(([t,v])=>({label:`${t} ${v.config}`,v:v[hl],c:tc(t)})), {min:0,max:70,log:true,lin:0.1,ticks:[0,0.1,1,10,50],fmt:v=>v+'%',xlab:'Genome called altered (symmetric log scale)'});
+  strip($('#chTF'), [{label:'ichorCNA (low-TF)',v:D.healthy_tf.ichorCNA,c:tc('ichorCNA')},{label:'ACE (100 kb)',v:D.healthy_tf.ACE,c:'#8c8c8c'},{label:'Fragle',v:D.healthy_tf.Fragle,c:tc('Spectre')}], {min:0,max:30,log:false,ticks:[0,5,10,20,30],fmt:v=>v+'%',xlab:'Estimated tumour fraction (true value 0%)'});
+}
+function hbar(host, rows, o){
+  const w=560,rowH=24,m={l:110,r:60,t:6,b:30}, h=m.t+rows.length*rowH+m.b, s=svg(w,h,host);
+  const sl=v=>o.log?Math.log10(v):v, X=v=>m.l+(sl(v)-sl(o.min))/(sl(o.max)-sl(o.min))*(w-m.l-m.r);
+  o.ticks.forEach(v=>{ el('line',{x1:X(v),x2:X(v),y1:m.t,y2:h-m.b,class:'ax'},s); txt(s,X(v),h-m.b+14,o.fmt(v),{'text-anchor':'middle'}); }); txt(s,(w+m.l)/2,h-4,o.xlab,{'text-anchor':'middle'});
+  rows.forEach((r,i)=>{ const y=m.t+i*rowH; txt(s,m.l-8,y+16,r.label,{'text-anchor':'end'});
+    el('rect',{x:m.l,y:y+5,width:Math.max(1,X(Math.max(o.min,r.v))-m.l),height:14,rx:3,fill:r.c,'fill-opacity':r.hi?1:0.85},s);
+    if(r.max!=null){ el('line',{x1:X(r.v),x2:X(Math.min(o.max,r.max)),y1:y+12,y2:y+12,stroke:tok('--ink'),'stroke-width':1},s); }
+    txt(s,X(Math.max(o.min,r.max??r.v))+6,y+16,r.txt,{style:'font-family:var(--f-mono);font-size:10.5px'}); });
+}
+function drawCost(){
+  const R=D.runtime.filter(r=>r.sim==='Sim1'||r.tool==='ACE').sort((a,b)=>b.med_min-a.med_min);
+  hbar($('#chTime'), R.map(r=>({label:r.tool,v:Math.max(0.1,r.med_min),c:tc(r.tool),txt:r.med_min<1?r.med_min.toFixed(1)+' min':Math.round(r.med_min)+' min'})), {min:0.1,max:100,log:true,ticks:[0.1,1,10,100],fmt:v=>v+'',xlab:'Minutes per run (log scale)'});
+  hbar($('#chMem'), R.map(r=>({label:r.tool,v:r.med_gb,max:r.max_gb,c:tc(r.tool),txt:r.med_gb.toFixed(1)+' GB (max '+r.max_gb.toFixed(0)+')'})), {min:0,max:24,log:false,ticks:[0,4,8,16,24],fmt:v=>v,xlab:'Peak memory, GB'});
+}
+$$('#tabs .tab').forEach(b=>b.addEventListener('click',()=>{ $$('#tabs .tab').forEach(x=>x.setAttribute('aria-selected',x===b)); ['sim1','hg008','healthy','cost'].forEach(k=>$('#p-'+k).hidden=(k!==b.dataset.t)); renderResults(); }));
+$('#sHgDepth').addEventListener('input',drawHeat);
+$$('#hlvl .chip').forEach(b=>b.addEventListener('click',()=>{ hl=b.dataset.l; $$('#hlvl .chip').forEach(x=>x.setAttribute('aria-pressed',x===b)); drawHealthy(); }));
+function renderResults(){ drawSim1(); drawHeat(); drawLod(); drawHealthy(); drawCost(); }
+
+/* ---------------- 04 scoring ---------------- */
+function example(){ const r=rng(42), T=D.truth.rep1, out=['#chrom\tstart\tend\ttype'];
+  T.forEach((e,i)=>{ const L=e[2]-e[1]; if(L<=100e3 || (L<1e6 && i%2===0)) return; const j=L<1e6?0.9:0.35; const a=Math.round(e[1]+(r()-0.5)*j*L), b=Math.round(e[2]+(r()-0.5)*j*L); out.push(`chr${e[0]}\t${a}\t${b}\t${e[3]}`); });
+  out.push('chr1\t143000000\t149000000\tloss','chr6\t31000000\t31400000\tgain','chr9\t66000000\t71000000\tgain','chr14\t20000000\t21500000\tloss','chr16\t33000000\t35000000\tloss','chr19\t52000000\t52300000\tgain'); return out.join('\n'); }
+function parseCalls(t){ const out=[], bad=[]; t.split(/\r?\n/).forEach((l,i)=>{ l=l.trim(); if(!l||l[0]==='#'||/^chrom/i.test(l)) return; const f=l.split(/[\t,; ]+/);
+  if(f.length<4){bad.push(i+1);return;} const c=f[0].replace(/^chr/i,''), s=+f[1], e=+f[2]; let ty=f[3].toLowerCase();
+  if(!isNaN(+ty)) ty= +ty>2?'gain':(+ty<2?'loss':'neutral'); else if(/gain|dup|amp|\+/.test(ty)) ty='gain'; else if(/loss|del|-/.test(ty)) ty='loss';
+  if(!isFinite(s)||!isFinite(e)||e<=s||(ty!=='gain'&&ty!=='loss')){ if(ty!=='neutral') bad.push(i+1); return; } out.push([c,s,e,ty]); }); return {calls:out,bad}; }
+function score(){
+  const truth=D.truth[$('#selTruth').value].map(e=>[String(e[0]),e[1],e[2],e[3]]), ro=+$('#sRO').value, {calls,bad}=parseCalls($('#calls').value);
+  const pairs=[]; truth.forEach((t,i)=>calls.forEach((c,j)=>{ if(t[0]!==c[0]||t[3]!==c[3]) return; const ov=Math.min(t[2],c[2])-Math.max(t[1],c[1]); if(ov<=0) return; const r=ov/Math.max(t[2]-t[1],c[2]-c[1]); pairs.push([r,i,j]); }));
+  pairs.sort((a,b)=>b[0]-a[0]); const ti=new Map(), cj=new Set(); pairs.forEach(([r,i,j])=>{ if(r>=ro && !ti.has(i) && !cj.has(j)){ ti.set(i,{r,j}); cj.add(j);} });
+  const best=truth.map((t,i)=>{ let m=0; pairs.forEach(p=>{ if(p[1]===i) m=Math.max(m,p[0]); }); return m; });
+  const TP=ti.size, FP=calls.length-cj.size, FN=truth.length-TP, P=calls.length?TP/calls.length:0, R=TP/truth.length, F=P+R?2*P*R/(P+R):0;
+  $('#mF1').textContent=F.toFixed(2); $('#mP').textContent=P.toFixed(2); $('#mR').textContent=R.toFixed(2);
+  $('#mCounts').textContent=`${calls.length} calls read · TP ${TP} · FP ${FP} · FN ${FN}${bad.length?` · ${bad.length} line(s) skipped (line ${bad.slice(0,4).join(', ')}${bad.length>4?'…':''})`:''}`;
+  // compare
+  const di=+$('#sCmp').value; $('#oCmp').textContent=D.sim1_depths[di]+'×';
+  const rows=Object.entries(D.sim1).map(([t,v])=>({label:t,v:v.F1_by_depth[di]??0,c:tc(t),txt:(v.F1_by_depth[di]??0).toFixed(2)})); rows.push({label:'Your calls',v:F,c:tok('--accent'),txt:F.toFixed(2),hi:true}); rows.sort((a,b)=>b.v-a.v);
+  hbar($('#chCompare'), rows.map(r=>Object.assign(r,{v:Math.max(0,r.v)})), {min:0,max:1,log:false,ticks:[0,0.25,0.5,0.75,1],fmt:v=>v,xlab:`Median event F1 of each caller at ${D.sim1_depths[di]}× (all backgrounds)`});
+  // ideogram
+  const cv=$('#ideo'), dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=150; cv.width=w*dpr; cv.height=h*dpr; const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const pl=58, pw=w-pl-6, X=(c,p)=>{ const k=(+c)-1; if(!(k>=0&&k<22)) return null; return pl+(OFF[k]+p)/G*pw; };
+  for(let c=0;c<22;c++){ ctx.fillStyle=c%2?tok('--chr-b'):tok('--chr-a'); ctx.fillRect(pl+OFF[c]/G*pw,16,CHR[c]/G*pw,104); }
+  ctx.fillStyle=tok('--muted'); ctx.font='11px '+tok('--f-body'); ctx.textAlign='right'; ctx.fillText('truth',pl-8,46); ctx.fillText('your calls',pl-8,98);
+  ctx.textAlign='center'; for(let c=0;c<22;c++){ if(w<520&&c%2) continue; ctx.fillText(c+1,pl+(OFF[c]+CHR[c]/2)/G*pw,138); }
+  truth.forEach((t,i)=>{ const x0=X(t[0],t[1]), x1=X(t[0],t[2]); if(x0==null) return; ctx.fillStyle=t[3]==='gain'?tok('--gain'):tok('--loss'); ctx.globalAlpha=ti.has(i)?1:0.35; ctx.fillRect(x0,28,Math.max(2,x1-x0),26); });
+  calls.forEach((c,j)=>{ const x0=X(c[0],c[1]), x1=X(c[0],c[2]); if(x0==null) return; ctx.fillStyle=c[3]==='gain'?tok('--gain'):tok('--loss'); ctx.globalAlpha=cj.has(j)?1:0.35; ctx.fillRect(x0,80,Math.max(2,x1-x0),26); if(!cj.has(j)){ ctx.globalAlpha=1; ctx.strokeStyle=tok('--ink'); ctx.strokeRect(x0,80,Math.max(2,x1-x0),26);} });
+  ctx.globalAlpha=1;
+  const fmtL=v=>v>=1e6?(v/1e6).toFixed(v>=1e7?0:1)+' Mb':(v/1e3).toFixed(0)+' kb';
+  $('#tbEvents').innerHTML=`<tr><th>Truth event</th><th>Type</th><th class="n">Size</th><th class="n">Best overlap</th><th>Status</th></tr>`+truth.map((t,i)=>`<tr><td class="mono">${t[0]}:${(t[1]/1e6).toFixed(2)}–${(t[2]/1e6).toFixed(2)} Mb</td><td>${t[3]}</td><td class="n">${fmtL(t[2]-t[1])}</td><td class="n">${best[i]?best[i].toFixed(2):'–'}</td><td>${ti.has(i)?'<span class="pill ok">detected</span>':'<span class="pill bad">missed</span>'}</td></tr>`).join('');
+}
+$('#btnScore').addEventListener('click',()=>{ score(); });
+$('#btnExample').addEventListener('click',()=>{ $('#calls').value=example(); $('#selTruth').value='rep1'; $('#exampleTag').hidden=false; score(); });
+$('#calls').addEventListener('input',()=>{ $('#exampleTag').hidden=true; });
+$('#fileCalls').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ $('#calls').value=rd.result; $('#exampleTag').hidden=true; score(); }; rd.readAsText(f); });
+['#selTruth','#sRO','#sCmp'].forEach(s=>$(s).addEventListener('input',()=>{ $('#oRO').textContent=(+$('#sRO').value).toFixed(2); score(); }));
+
+/* ---------------- 05 recommendation ---------------- */
+const Q={goal:'profile',depth:'mid',tf:'lowmid'};
+function reco(){
+  const g=Q.goal,d=Q.depth,f=Q.tf; let tool,cfg,sum,why=[],avoid=[];
+  const lowDepth=d==='low';
+  if(g==='tf'){ tool='ichorCNA'; cfg='1-Mb bins, low-tumour-fraction settings';
+    sum='Use ichorCNA’s tumour-fraction estimate, and read values below about 3% as indistinguishable from zero.';
+    why=['In HG008 mixtures the low-TF settings estimated 33%, 23% and 11% at true fractions of 30%, 20% and 10%.','The tumour defaults fitted a ploidy near 2.9 and underestimated by about a third (30% → 21%).','In 25 people without cancer it reported a median of 1.3% (maximum 2.5%), the same as in pure-normal mixtures.'];
+    if(f==='vlow'||f==='lowmid') why.push('At 5% or less, estimates were compressed into 1–4%, so they rank samples but do not measure them precisely.');
+    avoid=['Fragle without healthy controls from your own library protocol: it reported 17–29% ctDNA in people without cancer.','ACE automatic fits: they sat at the 5% floor in most samples.']; }
+  else if(g==='small'){
+    if(lowDepth){ tool='None reliable at this depth'; cfg='increase depth to ≥0.5–1×'; sum='At 0.1× no caller recovered 50-kb events; detection starts at about 250 kb–1 Mb.'; why=['QDNAseq with 10-kb bins found 0% of 50-kb events at 0.1×, 35% at 0.5× and 80% at 1×.','BIC-seq2 with 30-kb bins went from 0% to 55% to 95% over the same depths.']; avoid=['Fine bins at 0.1×: QDNAseq at 50 kb called an event of ≥10 Mb in all 25 healthy samples.']; }
+    else if(f==='germ'||f==='high'){ tool='QDNAseq'; cfg='50-kb bins (10–30 kb at ≥1×)'; sum='QDNAseq at fine resolution balances sensitivity and false calls best; BIC-seq2 is more sensitive but much noisier.';
+      why=['Simulation 1 (0.1–1×): QDNAseq 50 kb F1 0.71, precision 0.86, best of all callers (q < 0.001).','50-kb events need about 1×: detection rose from 0% at 0.1× to 80% at 1× with 10-kb bins.','BIC-seq2 30 kb reached recall 0.67 but made 15 false calls per Gb; 63% of its calls in healthy plasma lay in germline CNVs or segmental duplications.'];
+      avoid=['Spectre and CNVkit at fine bins (F1 ≤ 0.34).','ML callers without training data from your own samples.']; }
+    else { tool='Not recoverable reliably'; cfg='small somatic events below 10% tumour'; sum='Below 10% tumour, a one-copy change in a sub-megabase event is smaller than the counting noise for every caller tested.'; why=['Event F1 in HG008 mixtures reached 0.61 (QDNAseq) only at 20–30% tumour.','At 5–10% tumour, profile recovery came from broad events.']; avoid=['Reporting focal calls from low-tumour-fraction plasma without orthogonal confirmation.']; } }
+  else if(g==='screen'){ tool='QDNAseq'; cfg='100-kb bins'; sum='QDNAseq at 100 kb made the fewest false calls in real plasma at every depth.';
+    why=['No call at all in 13 of 25 people without cancer; a call ≥10 Mb in only 1 of 25.','No recurrent false-positive hotspots across individuals (CNVkit 190, ichorCNA 257).','Stayed near 0% genome altered at 0.1×, 1× and native depth.'];
+    avoid=['CNVkit with a flat reference: 6.8% of the genome altered and a ≥10-Mb call in all 25 healthy people.','ichorCNA segment calls: 26% of the genome altered in healthy plasma (its tumour fraction stayed near zero).']; }
+  else { // profile
+    if(f==='germ'){ tool='QDNAseq'; cfg='50-kb bins'; sum='For germline-level changes, QDNAseq at 50 kb gave the highest event F1.'; why=['Simulation 1 F1 0.71 at 0.1–1×, ahead of ichorCNA, BIC-seq2 and CNV-MEANN (0.45–0.46).']; avoid=['LYCEUM: no discrimination in any test (AUC ≈ 0.5).']; }
+    else { tool='QDNAseq'; cfg='100-kb bins, paired with ichorCNA (1 Mb, low-TF) for tumour fraction';
+      sum= f==='high' ? 'Above 10% tumour QDNAseq, ichorCNA and BIC-seq2 all recover the profile well; QDNAseq keeps the fewest false calls.' : 'QDNAseq detects the profile down to 1–2% tumour from 0.25× while staying clean in healthy plasma.';
+      why=[`Limit of detection: ${lowDepth?'5% tumour at 0.1×':'1–2% tumour from 0.25×'} for QDNAseq, ichorCNA and BIC-seq2.`,'Profile correlation at 10% tumour: ichorCNA 0.83, QDNAseq 0.66, BIC-seq2 0.66, CNVkit 0.39 (median over depths).','QDNAseq called no large events in healthy plasma; ichorCNA segments did in every individual, so use ichorCNA for tumour fraction rather than for calls.'];
+      if(f==='vlow') why.push('Below 1% tumour no caller exceeded the pure-normal null at any depth.');
+      if(lowDepth) why.push('At 0.1×, keep bins at ≥100 kb: finer bins multiply false calls.');
+      avoid=['CNVkit with a flat reference (profile r 0.23 at 5% tumour, many false calls).','ML callers trained on other samples: CNV-MEANN and dudeML reached r ≤ 0.25 even at 30% tumour.']; } }
+  $('#answer').innerHTML=`<div class="eyebrow">Suggested setup</div><h3>${tool}</h3><p class="mono" style="font-size:.85rem;color:var(--muted)">${cfg}</p><p>${sum}</p><div><b style="font-size:.85rem">Evidence from the benchmark</b><ul class="why">${why.map(x=>`<li>${x}</li>`).join('')}</ul></div>${avoid.length?`<div><b style="font-size:.85rem">Avoid</b><ul class="why">${avoid.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:''}`;
+}
+$$('#recoForm .chips').forEach(g=>g.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{ Q[g.dataset.q]=b.dataset.v; g.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x===b)); reco(); })));
+
+/* ---------------- 06 run ---------------- */
+$('#copyCmd').addEventListener('click',()=>{ const t=$('#cmd').textContent; (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$('#copied').textContent='Copied',()=>{ const r=document.createRange(); r.selectNodeContents($('#cmd')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); $('#copied').textContent='Selected, press Ctrl/Cmd+C'; }); });
+
+/* ---------------- boot ---------------- */
+function all(){ drawTrack(); drawFlow(curStep()); renderResults(); score(); }
+let _step=0; const curStep=()=>{ const a=$$('#flow .step').findIndex(b=>b.getAttribute('aria-pressed')==='true'); return a<0?0:a; };
+$('#calls').value=example();
+updSim(); drawFlow(0); renderResults(); score(); reco();
+let rt; window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(()=>{ drawTrack(); score(); },150); });
+const mq=matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener&&mq.addEventListener('change',all);
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+
+</script>

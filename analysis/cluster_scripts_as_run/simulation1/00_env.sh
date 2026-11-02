@@ -1,0 +1,17 @@
+#!/bin/bash
+source /mnt/isilon/cag_inf_op/palizbanf/cfCNV/cfCNV_project/00_metadata/config.sh
+export SIM1_ROOT="$SIM/healthy_cfDNA_spikein"
+export SIM1_TRUTH="$SIM1_ROOT/truth"
+export SIM1_MAN="$PROJECT/00_metadata/simulation1_manifests"
+export SIM1_OUT="$OUT/simulation1"
+export SIM1_HARM="$HARM/simulation1"
+export SIM1_MET="$METRICS/simulation1"
+export SIM1_LOG="$LOGS/simulation1"
+export REF37_FASTA="$REF37_DIR/fasta/human_g1k_v37.fasta"
+export REF37_FAI="${REF37_FASTA}.fai"
+export ICHOR_DIR="$TOOLS/classical/ichorCNA"
+export ICHOR_EXT="$ICHOR_DIR/inst/extdata"
+export READCOUNTER="$TOOLS/bin/readCounter"
+export SPECTRE="$TOOLS/bin/run_spectre"
+export MOSDEPTH="$TOOLS/bin/mosdepth"
+mkdir -p "$SIM1_MAN" "$SIM1_OUT" "$SIM1_HARM" "$SIM1_MET" "$SIM1_LOG"

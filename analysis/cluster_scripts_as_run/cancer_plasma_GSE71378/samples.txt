@@ -1,0 +1,11 @@
+# GSE71378 samples to analyse (sample titles as in ENA). Lines starting with # are ignored.
+# Deeply sequenced stage IV cancers (Snyder et al. 2016)
+IC15
+IC17
+IC20
+IC35
+IC37
+# Same-protocol healthy control (shallow, single individual)
+IH03
+# Add shallow cancer samples of the same cancer types here once their types are known (Table S4),
+# then: "$SYSPY" p1_inventory.py  and  bash 5_resume_stage1.sh

@@ -1,0 +1,12 @@
+tool	bin_bp
+LYCEUM	0
+Spectre_1kb	1000
+Spectre	500000
+CNVkit_flat	100000
+CNVkit	100000
+dudeML	1000000
+ichorCNA_default	1000000
+BICseq2	30000
+CNV-MEANN	500000
+ichorCNA	1000000
+QDNAseq	50000

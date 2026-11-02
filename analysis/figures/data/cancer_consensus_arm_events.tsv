@@ -1,0 +1,52 @@
+sample	type	arm	event	frac_arm
+IC15	small-cell lung	2p	loss	0.9468085106382979
+IC15	small-cell lung	2q	loss	0.9866666666666667
+IC15	small-cell lung	3p	loss	0.9230769230769231
+IC15	small-cell lung	4p	loss	0.9607843137254902
+IC15	small-cell lung	4q	loss	0.6808510638297872
+IC15	small-cell lung	5p	gain	0.9387755102040817
+IC15	small-cell lung	5q	loss	0.9924242424242424
+IC15	small-cell lung	10p	loss	1.0
+IC15	small-cell lung	10q	loss	0.9894736842105263
+IC15	small-cell lung	11p	loss	0.9629629629629629
+IC15	small-cell lung	11q	loss	0.975609756097561
+IC15	small-cell lung	12p	loss	1.0
+IC15	small-cell lung	12q	loss	0.9897959183673469
+IC15	small-cell lung	13q	loss	0.6632653061224489
+IC15	small-cell lung	15q	loss	0.9404761904761905
+IC15	small-cell lung	16p	loss	0.8918918918918919
+IC15	small-cell lung	16q	loss	0.9814814814814815
+IC15	small-cell lung	17p	loss	0.875
+IC15	small-cell lung	17q	loss	0.9482758620689655
+IC15	small-cell lung	18p	gain	1.0
+IC15	small-cell lung	18q	gain	0.9836065573770492
+IC15	small-cell lung	22q	loss	0.7837837837837838
+IC17	hepatocellular	1q	gain	0.816
+IC17	hepatocellular	4p	loss	0.9607843137254902
+IC17	hepatocellular	4q	loss	0.7092198581560284
+IC17	hepatocellular	5q	loss	0.7045454545454546
+IC17	hepatocellular	13q	loss	0.5204081632653061
+IC17	hepatocellular	14q	loss	0.9555555555555556
+IC17	hepatocellular	17p	loss	0.5416666666666666
+IC17	hepatocellular	21q	loss	0.9428571428571428
+IC20	lung squamous	7q	gain	0.9
+IC20	lung squamous	8p	loss	0.5434782608695652
+IC35	breast (DCIS)	1q	gain	0.984
+IC35	breast (DCIS)	3q	gain	0.5648148148148148
+IC35	breast (DCIS)	5p	gain	0.673469387755102
+IC35	breast (DCIS)	7p	gain	0.9
+IC35	breast (DCIS)	16q	gain	0.5370370370370371
+IC35	breast (DCIS)	20q	gain	0.5
+IC35	breast (DCIS)	21q	gain	0.8
+IC37	colorectal	2p	gain	0.8829787234042553
+IC37	colorectal	5q	loss	0.7348484848484849
+IC37	colorectal	7p	gain	1.0
+IC37	colorectal	7q	gain	0.99
+IC37	colorectal	8p	gain	0.5
+IC37	colorectal	8q	gain	0.9900990099009901
+IC37	colorectal	12p	loss	0.9444444444444444
+IC37	colorectal	13q	gain	0.9795918367346939
+IC37	colorectal	17p	loss	0.8333333333333334
+IC37	colorectal	18p	loss	1.0
+IC37	colorectal	18q	loss	0.9836065573770492
+IC37	colorectal	20q	gain	0.9722222222222222

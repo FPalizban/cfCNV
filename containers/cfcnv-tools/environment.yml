@@ -1,0 +1,11 @@
+name: cfcnv-tools
+channels: [conda-forge, bioconda]
+dependencies:
+  - python=3.11
+  - pandas=2.2
+  - numpy=1.26
+  - scipy=1.13
+  - samtools=1.16.1
+  - bedtools=2.30.0
+  - mosdepth=0.3.8
+  - procps-ng

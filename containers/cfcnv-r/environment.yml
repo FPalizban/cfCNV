@@ -1,0 +1,19 @@
+name: cfcnv-r
+channels: [conda-forge, bioconda]
+dependencies:
+  - r-base=4.2
+  - bioconductor-qdnaseq=1.34
+  - bioconductor-qdnaseq.hg19
+  - bioconductor-ace
+  - bioconductor-hmmcopy
+  - bioconductor-genomeinfodb
+  - bioconductor-genomicranges
+  - hmmcopy            # readCounter
+  - r-optparse
+  - r-plyr
+  - r-foreach
+  - r-domc
+  - r-data.table
+  - r-remotes
+  - git
+  - procps-ng

@@ -1,0 +1,9 @@
+work/
+.nextflow/
+.nextflow.log*
+results*/
+res_*/
+*.pyc
+__pycache__/
+.DS_Store
+analysis/figures/output/

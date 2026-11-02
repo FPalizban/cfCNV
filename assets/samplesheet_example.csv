@@ -1,0 +1,4 @@
+sample,bam,bai,group,expected_tf,tcga_cohort
+IC17,/path/to/IC17.bam,/path/to/IC17.bam.bai,cancer,,LIHC
+IC37,/path/to/IC37.bam,/path/to/IC37.bam.bai,cancer,,COAD+READ
+IH03,/path/to/IH03.bam,/path/to/IH03.bam.bai,control,0,

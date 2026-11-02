@@ -1,117 +1,149 @@
-# cfCNV
-Our main idea: 
-Benchmarking the CNV calling pipeline in the area of cfDNA genomic data
-Here, we first start with germline variants and will continue with somatic variants in the next step. and about the data, it is genomic NGS data including both short and long reads. short read sequencing data is the one that obtained from illumina sequencing and the long read sequencing is related to PacBio or Oxford Nanopore.
+# cfCNV — benchmarking copy-number callers on cell-free DNA
 
-Real dataset: 
-for cfDNA illumina sequencing data: http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE71378
+[![CI](https://github.com/FPalizban/cfCNV/actions/workflows/ci.yml/badge.svg)](https://github.com/FPalizban/cfCNV/actions/workflows/ci.yml)
+[![Nextflow](https://img.shields.io/badge/nextflow-%E2%89%A524.04-23aa62.svg)](https://www.nextflow.io/)
+[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?logo=docker)](https://www.docker.com/)
+[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg)](https://sylabs.io/docs/)
 
-for cfDNA PacBio sequencing data: https://ega-archive.org/studies/EGAS00001006609
+cfCNV is a benchmark and a reproducible Nextflow workflow for copy-number variant and alteration (CNV/CNA) calling
+in low-pass cell-free DNA (cfDNA) whole-genome sequencing. It runs five classical callers and three tumour-fraction
+estimators in containers, harmonises their output, builds a majority consensus, annotates calls against germline,
+artefact and cancer references, and scores calls against simulated truth.
 
-for cfDNA Oxford Nanopore sequencing data: https://ega-archive.org/studies/EGAS00001004975
+**Interactive explorer:** <https://fpalizban.github.io/cfCNV/> — results, a read-depth simulator and in-browser scoring of your own calls.
 
-Groundtruth  dataset:
- the groundtruth data like NA12878 is not available for cfDNA data. But there is database of related dataset which can be used for more analysis :
-https://generegulation.org/cfdna/
+| Layer | Data | Truth | Question |
+|---|---|---|---|
+| Simulation 1 | Healthy cfDNA (IH01–IH03, Snyder et al. 2016) with inserted gains and losses, 0.1–1× (up to 20×) | 30 events per replicate, 50 kb–50 Mb, 5 replicates | Can the caller find events of known size and position? |
+| Simulation 2 | NIST HG008 tumour mixed into matched normal, 0–30% tumour, 0.1–10× | NIST HG008 somatic copy-number benchmark | How low a tumour fraction can it detect? Is the tumour fraction right? |
+| Real plasma | 25 non-cancer WGS plasma samples (PRJNA795275); 5 stage IV cancers + 1 healthy (GSE71378) | none expected / consensus, TCGA PanCanAtlas | How many false alterations in real plasma? Do cancer calls look like the tumour type? |
 
+## Main results
 
-Validation data:
-the simulation can be used to validate the benchmarking result. a CNV simulator to manipulate a real cfDNA bam file will be implemented and used for further confirmation
-and also there are some read visualizing tools that can help to validate the result of CNV callers. these tools are:
-Manual assessment of individual candidate SVs remains critical, with many groups using Integrated Genome Viewer (IGV), or more specialized tools including svviz, SplitThreader, Ribbon , or SVPV
-and also using public databases:
-Very recently, the most comprehensive resource of small and large CNVs derived from WGS is from the Genome Aggregation Database (gnomAD), which was established using numerous CNV and SV callers.
-https://www.internationalgenome.org/human-genome-structural-variation-consortium/
+| Caller (primary setting) | Sim 1 event F1 (0.1–1×) | HG008 limit of detection (0.25–1×) | Non-cancer plasma: genome altered | Cancer plasma: F1 vs other callers / TCGA r |
+|---|---|---|---|---|
+| QDNAseq (50 kb / 100 kb) | 0.71 | 1–2% tumour | 0% | 0.86 / 0.48 |
+| ichorCNA (1 Mb, low-TF) | 0.46 | 2% | 26% (tumour fraction ≈1%) | 0.50 / 0.47 |
+| BIC-seq2 (30 kb / 10 kb) | 0.45 | 1–2% | 1.0% | 0.65 / 0.43 |
+| CNVkit (pooled / flat reference) | 0.34 | 1%* | 6.8% | 0.56 / 0.37 |
+| Spectre (500 kb / 100 kb) | 0.23 | 20–30% | 0.4% | 0.16 / 0.29 |
+| CNV-MEANN, dudeML (trained on Sim 1) | 0.45, 0.40 | 10–20% | not run | not run |
+| LYCEUM | 0 | not detected | not run | not run |
 
+\* narrow null in pure-normal mixtures; CNVkit's profile correlation was the lowest of the classical callers.
 
-there are few benchmarking articles that can be considered for further investigation:
-https://www.nature.com/articles/s41587-020-0538-8
-https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02636-8
+---
 
+## Quick start
 
-Genomic Tools or Methods:
-three different main pipelines will be considered for the above-mentioned datasets
+Requirements: [Nextflow](https://www.nextflow.io/docs/latest/install.html) ≥ 24.04 (Java 17+) and either
+Singularity/Apptainer (HPC) or Docker. All tools come in containers that are downloaded automatically.
 
+```bash
+# 1. check the installation (no data, no containers, about a minute)
+nextflow run FPalizban/cfCNV -r v1.0.0 -profile test -stub
 
-Run Benchmarking Experiments:
-
-the Nextflow will be used to implement the pipelines all together.
-
-Evaluation Metrics:
-
-#################################################################################
-tools installation
-
-ichorCNA:
-$ git clone https://github.com/broadinstitute/ichorCNA.git
-$ R CMD INSTALL ichorCNA 
-$ git clone https://github.com/shahcompbio/hmmcopy_utils.git
-$ cd hmmcopy_utils
-$ cmake . 
-$ make
-$ cd bin
-$ ./readCounter --window 1000000 --quality 20 --chromosome "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X,Y" ~/Documents/tutoring/IH03_filtered.bam > IH03.wig
-$ cd --
-$ cd ichorCNA
-$ Rscript scripts/runIchorCNA.R --id IH03 --WIG IH03.wig --ploidy "c(2,3)" --normal "c(0.5,0.6,0.7,0.8,0.9)" --maxCN 5 --gcWig inst/extdata/gc_hg19_1000kb.wig --mapWig inst/extdata/map_hg19_1000kb.wig --centromere inst/extdata/GRCh37.p13_centromere_UCSC-gapTable.txt --normalPanel inst/extdata/HD_ULP_PoN_1Mb_median_normAutosome_mapScoreFiltered_median.rds --includeHOMD False --chrs "1" --estimateNormal True --estimatePloidy True --estimateScPrevalence True --scStates "c(1,3)" --txnE 0.9999 --txnStrength 10000 --outDir ./
-
- Spectre 
-
-$ git clone https://github.com/fritzsedlazeck/Spectre.git
-$ wget https://github.com/brentp/mosdepth/releases/download/v0.3.4/mosdepth && chmod +x ./mosdepth && ./mosdepth -h
-$ ./mosdepth -n --fast-mode --by 1000 IH03_1000 IH03.bam  
-$ mv  IH03_1000.* mosdepth-0.3.4/IH03_1000
-$ python3 spectre.py  CNVCaller  --bin-size 1000  --coverage mosdepth-0.3.4/IH03_1000/ --sample-id IH03_1000 --output-dir IH03_1000-res/ --reference hs37d5.fa.gz
-WisecondorX:
-
-first run : $ 
-```
-pip install -U git+https://github.com/CenterForMedicalGeneticsGhent/WisecondorX
+# 2. call CNAs in your BAMs with the paper's real-data settings, plus 1x and 0.1x down-sampling
+nextflow run FPalizban/cfCNV -r v1.0.0 -profile singularity,slurm \
+    --input samples.csv --fasta /ref/human_g1k_v37.fasta --genome GRCh37 \
+    --downsample 1,0.1 --annotation_refs /refs/cfcnv_annotation/prepared \
+    --bicseq2_resources /refs/bicseq2/GRCh37_101mer --bicseq2_map_prefix human_g1k_v37.101mer \
+    --outdir results
 ```
 
-b then install the R packages in R 
-
-the commands to run it:
-https://github.com/CenterForMedicalGeneticsGhent/WisecondorX?tab=readme-ov-file
-
-
-
-QDNAseq:
-It is a r package and can be installed in R:
-```
-BiocManager::install("QDNAseq")
-```
+`samples.csv` (header required; `bai`, `group`, `expected_tf`, `tcga_cohort` are optional):
 
 ```
-BiocManager::install("QDNAseq.hg19")
+sample,bam,bai,group,expected_tf,tcga_cohort
+IC17,/data/IC17.bam,/data/IC17.bam.bai,cancer,,LIHC
+IC37,/data/IC37.bam,/data/IC37.bam.bai,cancer,,COAD+READ
+IH03,/data/IH03.bam,/data/IH03.bam.bai,control,0,
 ```
 
+`tcga_cohort` is a TCGA study code (or several joined with `+`); it switches on the TCGA concordance score.
 
+## Modes
 
+| `--mode` | What it does | Key options |
+|---|---|---|
+| `call` (default) | Callers + tumour-fraction estimators on your BAMs, optional down-sampling, harmonised calls, consensus, caller agreement, depth robustness, annotation | `--input`, `--fasta`, `--genome`, `--downsample`, `--annotation_refs` |
+| `simulate` | **Simulation 1.** Inserts 30 single-copy gains/losses (50 kb–50 Mb) per replicate into healthy cfDNA BAMs, down-samples to each depth, adds unspiked negative controls, runs the callers and scores them | `--input` (background BAMs), `--sim_replicates 5`, `--sim_depths 0.1,0.25,0.5,1`, `--truth assets/truth` |
+| `mix` | **Simulation 2.** In-silico tumour–normal mixtures at set depths and tumour fractions, then calling and tumour-fraction estimation | `--tumour_bam`, `--normal_bam`, `--tumour_depth`, `--normal_depth`, `--mix_fractions`, `--mix_depths` |
+| `score` | Scores one call set (BED/TSV: `chrom start end type`) against a truth set with the paper's matching rule | `--calls`, `--truth`, `--fasta` (for genome size) |
 
-BIC-seq2:
+With GRCh37 sizes, the truth generator reproduces the published Simulation 1 truth sets exactly (`assets/truth/`, checked in CI).
 
- first download the script for normalization and unzip it;
-$ wget https://compbio.med.harvard.edu/BIC-seq/NBICseq-norm_v0.2.4.tar.gz
-$  tar xvzf NBICseq-norm_v0.2.4.tar.gz
-$ cd NBICseq-norm_v0.2.4/
-$ make clean
-$ make
-then the same for the segmentation part which is for the CNV calling;
-$ wget https://compbio.med.harvard.edu/BIC-seq/NBICseq-seg_v0.7.2.tar.gz
-$ tar xvzf NBICseq-seg_v0.7.2.tar.gz 
-$ cd NBICseq-seg_v0.7.2/
-$ make clean
-$ make
+## Callers and settings
 
+| Tool | Version | Setting used (default) | Option |
+|---|---|---|---|
+| QDNAseq | 1.34 (+ QDNAseq.hg19 / .hg38) | 100-kb bins, CBS, `callBins` | `--qdnaseq_bins_kb 100` (comma list allowed) |
+| ichorCNA | 0.2.0 | 1-Mb windows, low-tumour-fraction settings (normal 0.95–0.999, ploidy 2, no subclones) | `--ichor_modes lowTF,default` |
+| BIC-seq2 | norm 0.2.4 / seg 0.7.2 | 10-kb bins, λ = 2, call when \|log2\| ≥ 0.2 | `--bicseq2_bin`, `--bicseq2_lambda`, `--bicseq2_log2_threshold` |
+| CNVkit | 0.9.10 | WGS mode, 30-kb bins, flat reference (pooled if normals are given) | `--cnvkit_bin`, `--cnvkit_normals 'n1.bam,n2.bam'` |
+| Spectre | 0.2.1 | mosdepth 100-kb coverage, `--cancer`, min. CNV length max(bin, 50 kb) | `--spectre_bin`, `--blacklist` |
+| ACE | Bioconductor | cellularity at ploidy 2 and free ploidy, from QDNAseq segments | `--tf_methods` |
+| Fragle | commit 3212220 | raw WGS mode (paired-end BAMs) | `--tf_methods` |
 
+Simulation 1 primary settings were QDNAseq 50 kb, BIC-seq2 30 kb, CNVkit 100 kb pooled and Spectre 500 kb; pass them
+with the options above. BIC-seq2 needs per-chromosome FASTA and mappability files for the read length; without
+`--bicseq2_resources` the workflow builds them once (GEM, ~1–2 days) and stores them under `results/resources`.
 
-#############################################################
-Investigating the data
- first the data was downloaded from different studies and the bam files were checked for their genome reference, which is hg19 for all.
-$samtools view -H M12741R.cutadapter4.blasr.bam |grep '^@SQ'c
-and then checking the chromosome length with https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&chromInfoPage=
+## Output
 
-# View basic statistics of BAM file
+```
+results/
+├── callers/<tool>/<sample>/        native output of every caller (VCF, .cns, .seg.txt, .cnv, plots)
+├── summary/
+│   ├── all_calls.tsv              every call, harmonised: sample_id base level group tool config chrom start end type
+│   ├── call_burden.tsv            calls, gains, losses, % genome altered, calls >= 10 Mb per caller run
+│   ├── tumour_fraction.tsv        ichorCNA, ACE (ploidy 2 / free), Fragle estimates (+ expected TF in mix mode)
+│   ├── consensus_calls.tsv        majority consensus (>= 3 callers) in 1-Mb windows
+│   ├── caller_agreement.tsv       each caller vs the other callers (precision, recall, F1) and TCGA r
+│   ├── depth_robustness.tsv       F1 of each down-sampled profile vs the same caller at native depth
+│   ├── window_states.tsv.gz       gain/neutral/loss per 1-Mb window, caller and sample
+│   ├── event_scores.tsv           (simulate/score) TP, FP, FN, precision, recall, F1, false calls/Gb, bp metrics
+│   ├── truth_detection.tsv        (simulate/score) detected yes/no per truth event
+│   └── annotation/                calls vs gnomAD-SV, segmental duplications, blacklist, OncoKB, TCGA; recurrent hotspot mask
+└── pipeline_info/                 run report, timeline, trace (runtime and memory per task)
+```
 
-$ samtools stats your_file.bam
+## Annotation references
+
+```bash
+bash bin/get_annotation_refs.sh /refs/cfcnv_annotation      # downloads public data, ~15 min
+# -> pass /refs/cfcnv_annotation/prepared as --annotation_refs
+```
+
+TCGA PanCanAtlas arm calls and SNP6 segments, GENCODE v19, OncoKB cancer genes, gnomAD-SV v2.1 (AF ≥ 1%), UCSC
+segmental duplications, ENCODE blacklist v2 and the hg38→hg19 chain (GRCh38 calls are lifted over piecewise).
+
+## Running on an HPC
+
+`-profile singularity,slurm` works on most Slurm clusters; `conf/chop.config` is an example institutional profile
+(`-profile chop`). Set `NXF_SINGULARITY_CACHEDIR` to a large shared folder so images are downloaded once, start the
+run inside `screen`/`tmux` or as a small Slurm job, and add `-resume` to continue after an interruption.
+Resource limits: `--max_cpus`, `--max_memory`, `--max_time`.
+
+## Containers
+
+Built from `containers/*/Dockerfile` by GitHub Actions and published at `ghcr.io/fpalizban/cfcnv-{r,cnvkit,bicseq2,spectre,fragle,tools}:1.0.0`.
+To use your own image for a step, add a config file with e.g.
+`process { withName: 'BICSEQ2_.*' { container = '/path/bicseq2.sif' } }` and pass it with `-c my.config`.
+
+## Reproducing the paper
+
+`analysis/` contains the scripts that turned the runs into the tables and figures (`analysis/figures` regenerates
+Figures 2–5 from source data), the machine-learning caller scripts, and the cluster scripts exactly as run. See
+`analysis/README.md`.
+
+## Citation
+
+If you use cfCNV, please cite the paper (see `CITATION.cff`) and the tools it runs: QDNAseq (Scheinin et al. 2014),
+ichorCNA (Adalsteinsson et al. 2017), BIC-seq2 (Xi et al. 2016), CNVkit (Talevich et al. 2016), Spectre
+(github.com/fritzsedlazeck/Spectre), ACE (Poell et al. 2019), Fragle (Zhu et al., bioRxiv 2023, doi:10.1101/2023.07.28.550922), mosdepth (Pedersen & Quinlan 2018),
+SAMtools (Danecek et al. 2021), Nextflow (Di Tommaso et al. 2017).
+
+## License
+
+MIT (workflow code). Each tool keeps its own license.

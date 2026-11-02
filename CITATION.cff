@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use cfCNV, please cite the paper below and the tools it runs."
+title: "cfCNV: a benchmark of copy-number callers for low-pass cell-free DNA sequencing"
+version: 1.0.0
+date-released: 2026-11-15
+license: MIT
+repository-code: "https://github.com/FPalizban/cfCNV"
+url: "https://fpalizban.github.io/cfCNV/"
+authors:
+  - family-names: Palizban
+    given-names: Fahimeh
+    affiliation: "Center for Applied Genomics, Children's Hospital of Philadelphia"
+# Add co-authors here in the paper's order, e.g.
+#  - family-names: ...
+#    given-names: ...
+keywords: [cell-free DNA, copy-number alteration, liquid biopsy, benchmark, Nextflow]
+# After the Zenodo release, add:  doi: 10.5281/zenodo.XXXXXXX
+# After publication, add a preferred-citation block with the journal reference.
