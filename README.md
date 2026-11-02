@@ -6,8 +6,9 @@
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg)](https://sylabs.io/docs/)
 
 cfCNV is a benchmark and a reproducible Nextflow workflow for copy-number variant and alteration (CNV/CNA) calling
-in low-pass cell-free DNA (cfDNA) whole-genome sequencing. It runs five classical callers and three tumour-fraction
-estimators in containers, harmonises their output, builds a majority consensus, annotates calls against germline,
+in low-pass cell-free DNA (cfDNA) whole-genome sequencing. It runs all eight benchmarked callers (five classical, three
+machine-learning) and three tumour-fraction estimators in containers, trains the machine-learning callers on simulated
+data, harmonises their output, builds a majority consensus, annotates calls against germline,
 artefact and cancer references, and scores calls against simulated truth.
 
 **Interactive explorer:** <https://fpalizban.github.io/cfCNV/> — results, a read-depth simulator and in-browser scoring of your own calls.
@@ -66,9 +67,9 @@ IH03,/data/IH03.bam,/data/IH03.bam.bai,control,0,
 
 | `--mode` | What it does | Key options |
 |---|---|---|
-| `call` (default) | Callers + tumour-fraction estimators on your BAMs, optional down-sampling, harmonised calls, consensus, caller agreement, depth robustness, annotation | `--input`, `--fasta`, `--genome`, `--downsample`, `--annotation_refs` |
-| `simulate` | **Simulation 1.** Inserts 30 single-copy gains/losses (50 kb–50 Mb) per replicate into healthy cfDNA BAMs, down-samples to each depth, adds unspiked negative controls, runs the callers and scores them | `--input` (background BAMs), `--sim_replicates 5`, `--sim_depths 0.1,0.25,0.5,1`, `--truth assets/truth` |
-| `mix` | **Simulation 2.** In-silico tumour–normal mixtures at set depths and tumour fractions, then calling and tumour-fraction estimation | `--tumour_bam`, `--normal_bam`, `--tumour_depth`, `--normal_depth`, `--mix_fractions`, `--mix_depths` |
+| `call` (default) | Callers + tumour-fraction estimators on your BAMs (CNV-MEANN/dudeML with `--ml_models`), optional down-sampling, harmonised calls, consensus, caller agreement, depth robustness, annotation | `--input`, `--fasta`, `--genome`, `--downsample`, `--annotation_refs` |
+| `simulate` | **Simulation 1.** Inserts 30 single-copy gains/losses (50 kb–50 Mb) per replicate into healthy cfDNA BAMs, down-samples to each depth, adds unspiked negative controls, trains CNV-MEANN and dudeML (leave-one-replicate-out), runs all callers and scores them; trained models are saved to `models/` | `--input` (background BAMs), `--sim_replicates 5`, `--sim_depths 0.1,0.25,0.5,1`, `--truth assets/truth` |
+| `mix` | **Simulation 2.** In-silico tumour–normal mixtures at set depths and tumour fractions, then calling (CNV-MEANN/dudeML with the Simulation 1 models, `--ml_models`) and tumour-fraction estimation | `--tumour_bam`, `--normal_bam`, `--tumour_depth`, `--normal_depth`, `--mix_fractions`, `--mix_depths` |
 | `score` | Scores one call set (BED/TSV: `chrom start end type`) against a truth set with the paper's matching rule | `--calls`, `--truth`, `--fasta` (for genome size) |
 
 With GRCh37 sizes, the truth generator reproduces the published Simulation 1 truth sets exactly (`assets/truth/`, checked in CI).
@@ -82,8 +83,19 @@ With GRCh37 sizes, the truth generator reproduces the published Simulation 1 tru
 | BIC-seq2 | norm 0.2.4 / seg 0.7.2 | 10-kb bins, λ = 2, call when \|log2\| ≥ 0.2 | `--bicseq2_bin`, `--bicseq2_lambda`, `--bicseq2_log2_threshold` |
 | CNVkit | 0.9.10 | WGS mode, 30-kb bins, flat reference (pooled if normals are given) | `--cnvkit_bin`, `--cnvkit_normals 'n1.bam,n2.bam'` |
 | Spectre | 0.2.1 | mosdepth 100-kb coverage, `--cancer`, min. CNV length max(bin, 50 kb) | `--spectre_bin`, `--blacklist` |
+| CNV-MEANN | Python port of the published network | 500-kb bins; 4 features → 15 tanh units → 3 classes; trained by the workflow | `--cnvmeann_bin` |
+| dudeML | commit a4c7c0b | 1-Mb windows, 5 flanking windows, random forest (RFC100) per depth; trained by the workflow | `--dudeml_bin` |
+| LYCEUM | commit 6e84332, released weights | hg38 exon targets (lifted one-to-one to GRCh37 when needed), exon calls merged into segments | – |
 | ACE | Bioconductor | cellularity at ploidy 2 and free ploidy, from QDNAseq segments | `--tf_methods` |
 | Fragle | commit 3212220 | raw WGS mode (paired-end BAMs) | `--tf_methods` |
+
+**Machine-learning callers.** LYCEUM is pretrained and runs in every mode. CNV-MEANN and dudeML need labelled
+training data: `--mode simulate` trains them (each CNV-positive sample is predicted by models that never saw its
+replicate; negative controls by all models) and writes the models to `results/models/`. Pass that folder as
+`--ml_models` to apply them in `call` or `mix` mode, as was done for Simulation 2 in the paper (dudeML uses the models
+trained at the depth closest to each sample). Without `--ml_models` these two callers are skipped with a warning. In
+the paper, CNV-MEANN for Simulation 1 was trained with the authors' MATLAB code, which needs a MATLAB licence; the
+workflow uses the Python implementation of the same network that was used for Simulation 2.
 
 Simulation 1 primary settings were QDNAseq 50 kb, BIC-seq2 30 kb, CNVkit 100 kb pooled and Spectre 500 kb; pass them
 with the options above. BIC-seq2 needs per-chromosome FASTA and mappability files for the read length; without
@@ -104,6 +116,7 @@ results/
 │   ├── window_states.tsv.gz       gain/neutral/loss per 1-Mb window, caller and sample
 │   ├── event_scores.tsv           (simulate/score) TP, FP, FN, precision, recall, F1, false calls/Gb, bp metrics
 │   ├── truth_detection.tsv        (simulate/score) detected yes/no per truth event
+├── models/                        (simulate) trained CNV-MEANN and dudeML models, for --ml_models
 │   └── annotation/                calls vs gnomAD-SV, segmental duplications, blacklist, OncoKB, TCGA; recurrent hotspot mask
 └── pipeline_info/                 run report, timeline, trace (runtime and memory per task)
 ```
@@ -127,7 +140,7 @@ Resource limits: `--max_cpus`, `--max_memory`, `--max_time`.
 
 ## Containers
 
-Built from `containers/*/Dockerfile` by GitHub Actions and published at `ghcr.io/fpalizban/cfcnv-{r,cnvkit,bicseq2,spectre,fragle,tools}:1.0.0`.
+Built from `containers/*/Dockerfile` by GitHub Actions and published at `ghcr.io/fpalizban/cfcnv-{r,cnvkit,bicseq2,spectre,fragle,ml,lyceum,tools}:1.0.0`.
 To use your own image for a step, add a config file with e.g.
 `process { withName: 'BICSEQ2_.*' { container = '/path/bicseq2.sif' } }` and pass it with `-c my.config`.
 
@@ -141,7 +154,7 @@ Figures 2–5 from source data), the machine-learning caller scripts, and the cl
 
 If you use cfCNV, please cite the paper (see `CITATION.cff`) and the tools it runs: QDNAseq (Scheinin et al. 2014),
 ichorCNA (Adalsteinsson et al. 2017), BIC-seq2 (Xi et al. 2016), CNVkit (Talevich et al. 2016), Spectre
-(github.com/fritzsedlazeck/Spectre), ACE (Poell et al. 2019), Fragle (Zhu et al., bioRxiv 2023, doi:10.1101/2023.07.28.550922), mosdepth (Pedersen & Quinlan 2018),
+(github.com/fritzsedlazeck/Spectre), CNV-MEANN, dudeML, LYCEUM, ACE (Poell et al. 2019), Fragle (Zhu et al., bioRxiv 2023, doi:10.1101/2023.07.28.550922), mosdepth (Pedersen & Quinlan 2018),
 SAMtools (Danecek et al. 2021), Nextflow (Di Tommaso et al. 2017).
 
 ## License

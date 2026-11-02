@@ -1,0 +1,14 @@
+name: cfcnv-bicseq2
+channels: [conda-forge, bioconda]
+dependencies:
+  - bicseq2-norm=0.2.4        # same versions as the paper; Bioconda builds them from the original Park-lab sources
+  - bicseq2-seg=0.7.2
+  - r-base
+  - r-mgcv
+  - perl
+  - samtools=1.16.1
+  - ucsc-wigtobigwig          # only for building mappability resources
+  - ucsc-bigwigtobedgraph
+  - wget
+  - bzip2
+  - procps-ng

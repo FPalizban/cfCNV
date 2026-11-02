@@ -1,0 +1,15 @@
+name: cfcnv-ml
+channels: [conda-forge, bioconda]
+dependencies:
+  - python=3.10              # same Python as the paper's dudeML / CNV-MEANN environment
+  - numpy<2
+  - pandas=2.0
+  - scipy
+  - scikit-learn=1.2.2
+  - joblib
+  - biopython
+  - pysam
+  - samtools=1.16.1
+  - bedtools=2.30.0
+  - git
+  - procps-ng

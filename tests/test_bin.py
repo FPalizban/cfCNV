@@ -64,3 +64,38 @@ def test_collect_and_consensus(tmp_path):
     assert list(cons[["chrom", "start", "end", "type"]].itertuples(index=False, name=None)) == [("1", 10_000_000, 13_000_000, "loss")]
     ag = pd.read_csv(tmp_path / "caller_agreement.tsv", sep="\t").set_index("tool")
     assert ag.loc["QDNAseq", "F1"] == 1.0 and ag.loc["CNVkit", "precision"] < 1.0
+
+
+def test_cnvmeann_train_and_predict(tmp_path):
+    """CNV-MEANN network learns a strong simulated gain and calls it in an unlabelled sample."""
+    import numpy as np
+    rng = np.random.default_rng(1)
+
+    def make(d, gain_chr, label=True):
+        d.mkdir()
+        for c in range(1, 23):
+            n = 200; rd = rng.normal(1, 0.1, n); lab = np.zeros(n, int)
+            if c == gain_chr: rd[50:90] *= 1.8; lab[50:90] = 1
+            if c == gain_chr + 7: rd[100:150] *= 0.3; lab[100:150] = 2
+            x = np.column_stack([np.arange(1, n + 1), rd, rng.uniform(0.35, 0.55, n), np.abs(rng.normal(0, 0.1, n)),
+                                 np.ones(n), lab if label else np.zeros(n, int)])
+            np.savetxt(d / f"{d.name}.chr{c}.bin500000.txt", x, delimiter="\t", fmt=["%d", "%.5f", "%.5f", "%.5f", "%.5f", "%d"])
+    dirs = []
+    for i in range(4):
+        make(tmp_path / f"tr{i}", 3 + i); dirs.append(tmp_path / f"tr{i}")
+    make(tmp_path / "test", 5, label=False)
+    run(BIN / "cnvmeann_train.py", "--bin", 500000, "--out", tmp_path / "m.joblib", *dirs)
+    run(BIN / "cnvmeann_predict.py", "--model", tmp_path / "m.joblib", "--features", tmp_path / "test", "--out", tmp_path / "ev.tsv")
+    ev = pd.read_csv(tmp_path / "ev.tsv", sep="\t", dtype={"chrom": str})
+    assert ((ev.chrom == "5") & (ev.type == "gain")).any()
+
+
+def test_lyceum_exon_calls_to_segments(tmp_path):
+    rows = ["Sample Name\tChromosome\tCNV Start Index\tCNV End Index\tLYCEUM Prediction",
+            "LYC\tchr1\t1000\t1200\t<DEL>", "LYC\tchr1\t5000\t5200\t<DEL>", "LYC\tchr1\t9000\t9100\t<NO-CALL>",
+            "LYC\tchr1\t9500\t9600\t<DEL>", "LYC\tchr2\t100\t300\t<DUP>"]
+    (tmp_path / "c.csv").write_text("\n".join(rows) + "\n")
+    run(BIN / "lyceum_tools.py", "calls", "--in", tmp_path / "c.csv", "--out", tmp_path / "s.tsv")
+    s = pd.read_csv(tmp_path / "s.tsv", sep="\t", dtype={"chrom": str})
+    assert list(s[["chrom", "start", "end", "type"]].itertuples(index=False, name=None)) == \
+        [("1", 1000, 5200, "loss"), ("1", 9500, 9600, "loss"), ("2", 100, 300, "gain")]

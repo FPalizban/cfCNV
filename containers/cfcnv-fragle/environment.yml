@@ -1,0 +1,12 @@
+name: cfcnv-fragle
+channels: [conda-forge, bioconda]
+dependencies:
+  - python=3.10
+  - pytorch-cpu>=2.0,<2.4      # CPU build of PyTorch
+  - scikit-learn=1.2.2          # version required by Fragle's saved model selector
+  - pandas<2
+  - numpy<2
+  - pysam
+  - samtools=1.16.1
+  - git
+  - procps-ng

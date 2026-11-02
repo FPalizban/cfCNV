@@ -1,6 +1,7 @@
 #!/bin/bash
 # Run once on the cluster (login node is fine) to record the tool versions behind the paper's results:
 #   bash record_tool_versions.sh > tool_versions_used.txt
+PROJECT=/mnt/isilon/cag_inf_op/palizbanf/cfCNV/cfCNV_project
 source /mnt/isilon/cag_inf_op/palizbanf/cfCNV/cfCNV_project/00_metadata/config.sh
 source /mnt/isilon/cag_inf_op/palizbanf/cfCNV/cfCNV_project/00_metadata/00_env.sh
 echo "== R / Bioconductor modules"; module load R/4.2.2-foss-2022b R-bundle-Bioconductor/3.16-foss-2022b-R-4.2.2 2>/dev/null
@@ -14,3 +15,6 @@ echo "== samtools / bedtools"; module load SAMtools/1.16.1-GCC-11.3.0 BEDTools/2
 echo "== BIC-seq2 image"; ls -l "$TOOLS"/containers/*.sif 2>/dev/null; cat "$TOOLS/bin/run_bicseq2" 2>/dev/null | head -20
 echo "== Fragle"; ls "$TOOLS"/FRAGLE-main 2>/dev/null | head; "$TOOLS"/Fragle_env/bin/python -c "import torch, sklearn; print('torch', torch.__version__, 'sklearn', sklearn.__version__)" 2>/dev/null
 echo "== Singularity"; singularity --version 2>/dev/null || /cm/shared/apps_chop/singularity/4.4.1/bin/singularity --version
+echo "== dudeML environment and source"; $PROJECT/06_tools/envs/dudeml/bin/python -m pip freeze 2>/dev/null | grep -i -E "scikit|pandas|numpy|joblib|pysam|scipy" ; git -C "$TOOLS/ML_based/dudeML" rev-parse HEAD 2>/dev/null
+echo "== CNV-MEANN"; git -C "$TOOLS/ML_based/CNV-MEANN" rev-parse HEAD 2>/dev/null; module load matlab/2023a 2>/dev/null && matlab -batch "disp(version)" 2>/dev/null | tail -1
+echo "== LYCEUM"; cat "$TOOLS/LYCEUM_commit.txt" 2>/dev/null; "$TOOLS"/envs/lyceum/bin/python -c "import torch, tensorflow, numpy, pandas; print('torch', torch.__version__, 'tf', tensorflow.__version__, 'numpy', numpy.__version__, 'pandas', pandas.__version__)" 2>/dev/null; "$TOOLS"/envs/lyceum/bin/sambamba --version 2>&1 | head -2

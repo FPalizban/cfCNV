@@ -4,7 +4,7 @@
  * https://github.com/FPalizban/cfCNV
  *
  *   --mode call      run callers (+ optional down-sampling), harmonise, consensus, annotation   [default]
- *   --mode simulate  Simulation 1: spike events into healthy cfDNA BAMs, down-sample, call, score vs truth
+ *   --mode simulate  Simulation 1: spike events into healthy cfDNA BAMs, down-sample, call, train ML callers, score
  *   --mode mix       Simulation 2: tumour-normal mixtures at set depths and tumour fractions, call
  *   --mode score     score one call set (TSV/BED) against a truth set
  */
@@ -13,6 +13,7 @@ nextflow.enable.dsl = 2
 include { DOWNSAMPLE; MAKE_TRUTH; SPIKE_CNVS; MIX_TUMOUR_NORMAL } from './modules/local/preprocess'
 include { COLLECT_CALLS; CONSENSUS; ANNOTATE; SCORE }             from './modules/local/summarise'
 include { CALL_CNAS }                                              from './subworkflows/local/call_cnas'
+include { ML_CALLERS }                                             from './subworkflows/local/ml_callers'
 
 def NO_FILE = file("${projectDir}/assets/NO_FILE")
 
@@ -104,7 +105,8 @@ workflow {
                 [m + [id: "${m.sample}_${t}x", level: "${t}x"], b, i] })
         }
         CALL_CNAS(ch_bam, ch_ref, fai)
-        COLLECT(CALL_CNAS.out.results, fai); res = COLLECT.out
+        ML_CALLERS(ch_bam, Channel.empty(), ch_ref, false)
+        COLLECT(CALL_CNAS.out.results.mix(ML_CALLERS.out.results), fai); res = COLLECT.out
         if (primary.tokenize(',').size() >= 2) {
             tcga = params.annotation_refs ? file("${params.annotation_refs}/tcga_window_freq_1Mb.tsv") : NO_FILE
             if (params.genome != 'GRCh37' && tcga != NO_FILE) {
@@ -136,7 +138,8 @@ workflow {
         DOWNSAMPLE(ch_pos.mix(ch_neg).combine(Channel.fromList(depths)), fai)
         ch_bam = DOWNSAMPLE.out.bam.map { m, t, b, i -> [m + [id: "${m.sample}_${t}x", level: "${t}x", group: m.rep ? 'positive' : 'negative'], b, i] }
         CALL_CNAS(ch_bam, ch_ref, fai)
-        COLLECT(CALL_CNAS.out.results, fai); res = COLLECT.out
+        ML_CALLERS(ch_bam, ch_truth, ch_ref, true)
+        COLLECT(CALL_CNAS.out.results.mix(ML_CALLERS.out.results), fai); res = COLLECT.out
         // truth map: sample_id -> truth file (empty for negative controls)
         ch_tm = ch_bam.map { m, b, i -> m.rep ? "${m.id}\trep${m.rep}.truth.tsv" : "${m.id}\t" }
                      .collectFile(name: 'truth_map.tsv', newLine: true, sort: true)
@@ -157,7 +160,8 @@ workflow {
             def id = "mix_tf${f}_${d}x"
             [[id: id, sample: id, level: "${d}x", group: 'mixture', expected_tf: f, seed: 0], b, i] }
         CALL_CNAS(ch_bam, ch_ref, fai)
-        COLLECT(CALL_CNAS.out.results, fai)
+        ML_CALLERS(ch_bam, Channel.empty(), ch_ref, false)
+        COLLECT(CALL_CNAS.out.results.mix(ML_CALLERS.out.results), fai)
     }
     else error "unknown --mode ${params.mode} (call | simulate | mix | score)"
 }

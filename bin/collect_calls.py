@@ -60,6 +60,27 @@ def bicseq2(f, thr):
             for c, s, e, v in zip(d.iloc[:, 0], d.iloc[:, 1], d.iloc[:, 2], d[lc]) if nc(c) in AUTO and abs(v) >= thr]
 
 
+def dudeml(f):
+    """dudeML per-window predictions (chr, start 1-based, end, ID, coverage, CNV, ...): adjacent windows of the
+    same class are merged, as in the paper's Simulation 1 scoring"""
+    op = gzip.open if str(f).endswith(".gz") else open
+    rows = []
+    with op(f, "rt") as fh:
+        for ln in fh:
+            p = ln.rstrip("\n").split("\t")
+            if len(p) < 6 or nc(p[0]) not in AUTO: continue
+            k = p[5].strip().lower()
+            t = "loss" if k.startswith("del") else "gain" if k.startswith("dup") else None
+            rows.append((nc(p[0]), int(float(p[1])) - 1, int(float(p[2])), t))
+    rows.sort(key=lambda r: (int(r[0]), r[1])); out, cur = [], None
+    for c, s, e, t in rows:
+        if cur and t and cur[0] == c and cur[3] == t and cur[2] == s: cur[2] = e; continue
+        if cur: out.append(tuple(cur)); cur = None
+        if t: cur = [c, s, e, t]
+    if cur: out.append(tuple(cur))
+    return out
+
+
 def generic(f):
     """already harmonised: chrom start end type (header optional)"""
     out = []
@@ -98,7 +119,7 @@ def main():
     genome = sum(int(l.split()[1]) for l in open(a.fai) if nc(l.split()[0]) in AUTO)
     M = pd.read_csv(a.manifest, sep="\t", dtype=str).fillna("")
     parsers = {"QDNAseq": qdnaseq, "CNVkit": cnvkit, "ichorCNA": ichor, "Spectre": spectre,
-               "BIC-seq2": lambda f: bicseq2(f, a.bic_threshold)}
+               "BIC-seq2": lambda f: bicseq2(f, a.bic_threshold), "dudeML": dudeml}
     calls, burden, tf = [], [], []
     for r in M.itertuples():
         key = dict(sample_id=r.sample_id, base=r.base, level=r.level, group=r.group)

@@ -1,4 +1,4 @@
-# Builds the six cfCNV containers and pushes them to the GitHub Container Registry:
+# Builds the eight cfCNV containers and pushes them to the GitHub Container Registry:
 #   ghcr.io/<owner>/cfcnv-<name>:<version>  and  :latest
 # Runs when a Dockerfile changes on main, or by hand (Actions tab -> "Build containers" -> Run workflow).
 name: Build containers
@@ -23,9 +23,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [cfcnv-tools, cfcnv-r, cfcnv-cnvkit, cfcnv-spectre, cfcnv-fragle, cfcnv-bicseq2]
+        image: [cfcnv-tools, cfcnv-r, cfcnv-cnvkit, cfcnv-spectre, cfcnv-fragle, cfcnv-bicseq2, cfcnv-ml, cfcnv-lyceum]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Free disk space
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
       - uses: docker/setup-buildx-action@v3

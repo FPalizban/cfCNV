@@ -1,0 +1,9 @@
+name: cfcnv-lyceum
+channels: [conda-forge, bioconda]
+dependencies:
+  - python=3.8               # as in the authors' LYCEUM_environment.yml
+  - sambamba=0.8.0
+  - samtools=1.16.1
+  - git
+  - pip
+  - procps-ng
