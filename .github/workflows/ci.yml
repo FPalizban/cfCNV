@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        nextflow: ["24.10.4", "26.10.4"]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
@@ -19,7 +23,7 @@ jobs:
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: "17" }
       - uses: nf-core/setup-nextflow@v2
-        with: { version: "24.10.4" }
+        with: { version: "${{ matrix.nextflow }}" }
       - name: Stub run - call mode
         run: nextflow run main.nf -profile test -stub
       - name: Stub run - simulate mode
