@@ -176,7 +176,8 @@ process DUDEML_PREDICT {
       M=\$(for x in \$M/depth_*; do echo "\$x \${x##*depth_}"; done | awk -v d="\$D" '{e=\$2-d; if(e<0)e=-e; print e, \$1}' | sort -g | head -n1 | cut -d' ' -f2)
       echo "sample depth \${D}x -> models in \$M"
     fi
-    python \${DUDEML_DIR:-/opt/dudeML}/dudeML.py predict -i ${sample_bed} -t \$(readlink -f \$M)/ -o ${meta.id}.dudeML.${cfg}.predict.bed
+    D=\${DUDEML_DIR:-\$(get_dudeml.sh)}
+    python \$D/dudeML.py predict -i ${sample_bed} -t \$(readlink -f \$M)/ -o ${meta.id}.dudeML.${cfg}.predict.bed
     gzip -f ${meta.id}.dudeML.${cfg}.predict.bed
     """
     stub:

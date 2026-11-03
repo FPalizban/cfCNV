@@ -3,7 +3,6 @@ message: "If you use cfCNV, please cite the paper below and the tools it runs."
 title: "cfCNV: a benchmark of copy-number callers for low-pass cell-free DNA sequencing"
 version: 1.0.0
 date-released: 2026-11-15
-license: MIT
 repository-code: "https://github.com/FPalizban/cfCNV"
 url: "https://fpalizban.github.io/cfCNV/"
 authors:

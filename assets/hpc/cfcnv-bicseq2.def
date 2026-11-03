@@ -1,0 +1,22 @@
+Bootstrap: docker
+From: mambaorg/micromamba:1.5.10
+
+# Same contents as containers/cfcnv-bicseq2/Dockerfile (BIC-seq2 terms: free for academic use)
+%files
+    containers/cfcnv-bicseq2/environment.yml /tmp/env.yml
+
+%post
+    micromamba install -y -n base -f /tmp/env.yml && micromamba clean -a -y
+    export PATH=/opt/conda/bin:$PATH
+    cd /
+    wget -q --tries=5 http://compbio.med.harvard.edu/BIC-seq/samtools-0.1.7a_getUnique-0.1.3.tar.gz
+    tar xzf samtools-0.1.7a_getUnique-0.1.3.tar.gz && rm -f samtools-0.1.7a_getUnique-0.1.3.tar.gz
+    test -s /samtools-0.1.7a_getUnique-0.1.3/misc/samtools.pl
+    wget -q --tries=5 -O gem.tbz2 "https://downloads.sourceforge.net/project/gemlibrary/gem-library/Binary%20pre-release%203/GEM-binaries-Linux-x86_64-core_i3-20130406-045632.tbz2" \
+      && tar xjf gem.tbz2 && cp GEM-binaries-*/bin/* /usr/local/bin/ && rm -rf gem.tbz2 GEM-binaries-* || true
+
+%environment
+    export PATH=/opt/conda/bin:$PATH
+    export BICSEQ2_NORM=/opt/conda/bin/NBICseq-norm.pl
+    export BICSEQ2_SEG=/opt/conda/bin/NBICseq-seg.pl
+    export BICSEQ2_GETUNIQUE=/samtools-0.1.7a_getUnique-0.1.3/misc/samtools.pl

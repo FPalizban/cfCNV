@@ -1,4 +1,4 @@
-# Builds the eight cfCNV containers and pushes them to the GitHub Container Registry:
+# Builds the seven distributable cfCNV containers and pushes them to the GitHub Container Registry:
 #   ghcr.io/<owner>/cfcnv-<name>:<version>  and  :latest
 # Runs when a Dockerfile changes on main, or by hand (Actions tab -> "Build containers" -> Run workflow).
 name: Build containers
@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [cfcnv-tools, cfcnv-r, cfcnv-cnvkit, cfcnv-spectre, cfcnv-fragle, cfcnv-bicseq2, cfcnv-ml, cfcnv-lyceum]
+        image: [cfcnv-tools, cfcnv-r, cfcnv-cnvkit, cfcnv-spectre, cfcnv-fragle, cfcnv-ml, cfcnv-lyceum]
     steps:
       - uses: actions/checkout@v5
       - name: Free disk space
@@ -48,3 +48,16 @@ jobs:
             ghcr.io/${{ steps.n.outputs.owner }}/${{ matrix.image }}:latest
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # BIC-seq2 is free for academic use only and its redistribution terms are not stated, so its image is
+  # built here only to check the recipe; it is NOT pushed. Users build their own (assets/hpc/README_bicseq2.md).
+  check-bicseq2-recipe:
+    runs-on: ubuntu-latest
+    continue-on-error: true      # depends on the BIC-seq site being reachable
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: containers/cfcnv-bicseq2
+          push: false

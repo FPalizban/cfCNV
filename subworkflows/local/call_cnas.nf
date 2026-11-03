@@ -52,7 +52,10 @@ workflow CALL_CNAS {
         SPECTRE(MOSDEPTH_BINS.out.bed, ch_ref, bl, kbLabel(params.spectre_bin))
         ch_out = ch_out.mix(SPECTRE.out.calls.map { m, c, f -> [m, 'Spectre', c, 'calls', f] })
     }
-    if ('bicseq2' in callers) {
+    if ('bicseq2' in callers && !params.bicseq2_container && !workflow.stubRun) {
+        log.warn "BIC-seq2 skipped: cfCNV does not distribute a BIC-seq2 image (academic-use licence). Build one as described in assets/hpc/README_bicseq2.md and pass --bicseq2_container."
+    }
+    if ('bicseq2' in callers && (params.bicseq2_container || workflow.stubRun)) {
         if (params.bicseq2_resources) {
             ch_bres = Channel.value(file(params.bicseq2_resources, checkIfExists: true))
         } else {

@@ -12,5 +12,5 @@ RUN git clone https://github.com/skandlab/FRAGLE.git /opt/FRAGLE \
  && python -c "import torch, sklearn, pysam, pandas, joblib; print('torch', torch.__version__, 'sklearn', sklearn.__version__)" \
  && python -c "import joblib; joblib.load('/opt/FRAGLE/Models/select_model.pkl'); print('Fragle model selector loads')"
 USER $MAMBA_USER
-LABEL org.opencontainers.image.source="https://github.com/FPalizban/cfCNV" \
+LABEL org.opencontainers.image.source="https://github.com/FPalizban/cfCNV" org.opencontainers.image.licenses="CC-BY-NC-SA-4.0 (Fragle)" \
       org.opencontainers.image.description="cfCNV: Fragle"

@@ -3,7 +3,7 @@
 # usage: dudeml_features.sh <bam> <sample> <bin_bp> <truth.tsv or NONE>
 #   -> <sample>.sample.bed (for prediction) and, with truth, <sample>.train.bed (labelled, for training)
 set -euo pipefail
-BAM=$1; S=$2; B=$3; TRUTH=${4:-NONE}; D=${DUDEML_DIR:-/opt/dudeML}
+BAM=$1; S=$2; B=$3; TRUTH=${4:-NONE}; D=${DUDEML_DIR:-$(get_dudeml.sh)}
 samtools idxstats "$BAM" | awk '{c=$1; sub(/^chr/,"",c)} c ~ /^([1-9]|1[0-9]|2[0-2])$/ {print $1}' > chroms.txt
 dudeml_winstat.py --bam "$BAM" --sample "$S" --outdir . --chroms chroms.txt --bins "$B"
 mkdir -p fv

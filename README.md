@@ -48,6 +48,7 @@ nextflow run FPalizban/cfCNV -r v1.0.0 -profile test -stub
 nextflow run FPalizban/cfCNV -r v1.0.0 -profile singularity,slurm \
     --input samples.csv --fasta /ref/human_g1k_v37.fasta --genome GRCh37 \
     --downsample 1,0.1 --annotation_refs /refs/cfcnv_annotation/prepared \
+    --bicseq2_container /images/cfcnv-bicseq2.sif \
     --bicseq2_resources /refs/bicseq2/GRCh37_101mer --bicseq2_map_prefix human_g1k_v37.101mer \
     --outdir results
 ```
@@ -140,9 +141,9 @@ Resource limits: `--max_cpus`, `--max_memory`, `--max_time`.
 
 ## Containers
 
-Built from `containers/*/Dockerfile` by GitHub Actions and published at `ghcr.io/fpalizban/cfcnv-{r,cnvkit,bicseq2,spectre,fragle,ml,lyceum,tools}:1.0.0`.
+Built from `containers/*/Dockerfile` by GitHub Actions and published at `ghcr.io/fpalizban/cfcnv-{r,cnvkit,spectre,fragle,ml,lyceum,tools}:1.0.0`. Two tools are not inside any published image because their terms do not clearly allow redistribution: **BIC-seq2** (build your own image, `assets/hpc/README_bicseq2.md`, and pass `--bicseq2_container`; otherwise BIC-seq2 is skipped) and **dudeML** (downloaded from the authors' repository when the workflow runs).
 To use your own image for a step, add a config file with e.g.
-`process { withName: 'BICSEQ2_.*' { container = '/path/bicseq2.sif' } }` and pass it with `-c my.config`.
+`process { withName: 'QDNASEQ' { container = '/path/my_image.sif' } }` and pass it with `-c my.config`.
 
 ## Reproducing the paper
 
@@ -157,6 +158,11 @@ ichorCNA (Adalsteinsson et al. 2017), BIC-seq2 (Xi et al. 2016), CNVkit (Talevic
 (github.com/fritzsedlazeck/Spectre), CNV-MEANN, dudeML, LYCEUM, ACE (Poell et al. 2019), Fragle (Zhu et al., bioRxiv 2023, doi:10.1101/2023.07.28.550922), mosdepth (Pedersen & Quinlan 2018),
 SAMtools (Danecek et al. 2021), Nextflow (Di Tommaso et al. 2017).
 
-## License
+## Licence
 
-MIT (workflow code). Each tool keeps its own license.
+**No licence has been chosen yet for the cfCNV code.** Until one is added, all rights are reserved: the code can be
+read here but not reused or redistributed. A licence will be added after institutional review.
+
+The tools that cfCNV runs keep their own licences, and some restrict use: BIC-seq2 is free for academic use only,
+Fragle is CC BY-NC-SA 4.0 (non-commercial), and dudeML has no licence file. See
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for every tool, its licence and how cfCNV obtains it.
