@@ -1,0 +1,120 @@
+sample_id	base	level	method	TF	ploidy
+IC15_full	IC15	full	ichorCNA 1000kb_lowTF	0.4493	1.476
+IC15_full	IC15	full	ichorCNA 1000kb_default	0.2935	2.927
+IC15_full	IC15	full	ichorCNA 500kb_default	0.2913	2.947
+IC15_full	IC15	full	ACE ploidy2 100kb	0.37	2.0
+IC15_full	IC15	full	ACE ploidy2 500kb	0.37	2.0
+IC15_full	IC15	full	ACE ploidy2 1000kb	0.37	2.0
+IC15_full	IC15	full	Fragle	0.5712961616516113	
+IC15_d1	IC15	d1	ichorCNA 1000kb_lowTF	0.4495	1.477
+IC15_d1	IC15	d1	ichorCNA 1000kb_default	0.2937	2.929
+IC15_d1	IC15	d1	ichorCNA 500kb_default	0.2909	2.948
+IC15_d1	IC15	d1	ACE ploidy2 100kb	0.37	2.0
+IC15_d1	IC15	d1	ACE ploidy2 500kb	0.37	2.0
+IC15_d1	IC15	d1	ACE ploidy2 1000kb	0.37	2.0
+IC15_d1	IC15	d1	Fragle	0.5599396553039552	
+IC15_d0p1	IC15	d0p1	ichorCNA 1000kb_lowTF	0.4474	1.479
+IC15_d0p1	IC15	d0p1	ichorCNA 1000kb_default	0.5935	2.467
+IC15_d0p1	IC15	d0p1	ichorCNA 500kb_default	0.2867	2.957
+IC15_d0p1	IC15	d0p1	ACE ploidy2 100kb	0.37	2.0
+IC15_d0p1	IC15	d0p1	ACE ploidy2 500kb	0.37	2.0
+IC15_d0p1	IC15	d0p1	ACE ploidy2 1000kb	0.37	2.0
+IC15_d0p1	IC15	d0p1	Fragle	0.5562381877899171	
+IC17_full	IC17	full	ichorCNA 1000kb_lowTF	0.2999	1.456
+IC17_full	IC17	full	ichorCNA 1000kb_default	0.2296	2.189
+IC17_full	IC17	full	ichorCNA 500kb_default	0.2318	2.193
+IC17_full	IC17	full	ACE ploidy2 100kb	0.21	2.0
+IC17_full	IC17	full	ACE ploidy2 500kb	0.21	2.0
+IC17_full	IC17	full	ACE ploidy2 1000kb	0.22	2.0
+IC17_full	IC17	full	Fragle	0.4495272674560547	
+IC17_d1	IC17	d1	ichorCNA 1000kb_lowTF	0.3004	1.456
+IC17_d1	IC17	d1	ichorCNA 1000kb_default	0.2272	2.169
+IC17_d1	IC17	d1	ichorCNA 500kb_default	0.2312	2.192
+IC17_d1	IC17	d1	ACE ploidy2 100kb	0.22	2.0
+IC17_d1	IC17	d1	ACE ploidy2 500kb	0.21	2.0
+IC17_d1	IC17	d1	ACE ploidy2 1000kb	0.22	2.0
+IC17_d1	IC17	d1	Fragle	0.453688455581665	
+IC17_d0p1	IC17	d0p1	ichorCNA 1000kb_lowTF	0.3035	1.457
+IC17_d0p1	IC17	d0p1	ichorCNA 1000kb_default	0.254	2.249
+IC17_d0p1	IC17	d0p1	ichorCNA 500kb_default	0.2306	2.184
+IC17_d0p1	IC17	d0p1	ACE ploidy2 100kb	0.22	2.0
+IC17_d0p1	IC17	d0p1	ACE ploidy2 500kb	0.22	2.0
+IC17_d0p1	IC17	d0p1	ACE ploidy2 1000kb	0.22	2.0
+IC17_d0p1	IC17	d0p1	Fragle	0.4638703365325928	
+IC20_full	IC20	full	ichorCNA 1000kb_lowTF	0.2331	1.658
+IC20_full	IC20	full	ichorCNA 1000kb_default	0.2665	2.591
+IC20_full	IC20	full	ichorCNA 500kb_default	0.2679	2.612
+IC20_full	IC20	full	ACE ploidy2 100kb	0.17	2.0
+IC20_full	IC20	full	ACE ploidy2 500kb	0.17	2.0
+IC20_full	IC20	full	ACE ploidy2 1000kb	0.17	2.0
+IC20_full	IC20	full	Fragle	0.353796464920044	
+IC20_d1	IC20	d1	ichorCNA 1000kb_lowTF	0.2333	1.655
+IC20_d1	IC20	d1	ichorCNA 1000kb_default	0.2699	2.598
+IC20_d1	IC20	d1	ichorCNA 500kb_default	0.2669	2.608
+IC20_d1	IC20	d1	ACE ploidy2 100kb	0.17	2.0
+IC20_d1	IC20	d1	ACE ploidy2 500kb	0.17	2.0
+IC20_d1	IC20	d1	ACE ploidy2 1000kb	0.17	2.0
+IC20_d1	IC20	d1	Fragle	0.3532340545654296	
+IC20_d0p1	IC20	d0p1	ichorCNA 1000kb_lowTF	0.2328	1.644
+IC20_d0p1	IC20	d0p1	ichorCNA 1000kb_default	0.2647	2.577
+IC20_d0p1	IC20	d0p1	ichorCNA 500kb_default	0.2671	2.569
+IC20_d0p1	IC20	d0p1	ACE ploidy2 100kb	0.17	2.0
+IC20_d0p1	IC20	d0p1	ACE ploidy2 500kb	0.17	2.0
+IC20_d0p1	IC20	d0p1	ACE ploidy2 1000kb	0.17	2.0
+IC20_d0p1	IC20	d0p1	Fragle	0.3146711540222168	
+IC35_full	IC35	full	ichorCNA 1000kb_lowTF	0.2591	1.577
+IC35_full	IC35	full	ichorCNA 1000kb_default	0.4379	2.382
+IC35_full	IC35	full	ichorCNA 500kb_default	0.2351	1.695
+IC35_full	IC35	full	ACE ploidy2 100kb	0.19	2.0
+IC35_full	IC35	full	ACE ploidy2 500kb	0.14	2.0
+IC35_full	IC35	full	ACE ploidy2 1000kb	0.18	2.0
+IC35_full	IC35	full	Fragle	0.5096053066253663	
+IC35_d1	IC35	d1	ichorCNA 1000kb_lowTF	0.2613	1.577
+IC35_d1	IC35	d1	ichorCNA 1000kb_default	0.2923	2.598
+IC35_d1	IC35	d1	ichorCNA 500kb_default	0.2349	1.706
+IC35_d1	IC35	d1	ACE ploidy2 100kb	0.19	2.0
+IC35_d1	IC35	d1	ACE ploidy2 500kb	0.15	2.0
+IC35_d1	IC35	d1	ACE ploidy2 1000kb	0.17	2.0
+IC35_d1	IC35	d1	Fragle	0.5190263366699219	
+IC35_d0p1	IC35	d0p1	ichorCNA 1000kb_lowTF	0.2758	1.589
+IC35_d0p1	IC35	d0p1	ichorCNA 1000kb_default	0.2979	2.612
+IC35_d0p1	IC35	d0p1	ichorCNA 500kb_default	0.2424	1.704
+IC35_d0p1	IC35	d0p1	ACE ploidy2 100kb	0.23	2.0
+IC35_d0p1	IC35	d0p1	ACE ploidy2 500kb	0.23	2.0
+IC35_d0p1	IC35	d0p1	ACE ploidy2 1000kb	0.23	2.0
+IC35_d0p1	IC35	d0p1	Fragle	0.5643497371673585	
+IC37_full	IC37	full	ichorCNA 1000kb_lowTF	0.2498	1.73
+IC37_full	IC37	full	ichorCNA 1000kb_default	0.2286	2.581
+IC37_full	IC37	full	ichorCNA 500kb_default	0.2292	2.607
+IC37_full	IC37	full	ACE ploidy2 100kb	0.25	2.0
+IC37_full	IC37	full	ACE ploidy2 500kb	0.16	2.0
+IC37_full	IC37	full	ACE ploidy2 1000kb	0.18	2.0
+IC37_full	IC37	full	Fragle	0.3668316745758057	
+IC37_d1	IC37	d1	ichorCNA 1000kb_lowTF	0.2505	1.735
+IC37_d1	IC37	d1	ichorCNA 1000kb_default	0.2279	2.579
+IC37_d1	IC37	d1	ichorCNA 500kb_default	0.2281	2.607
+IC37_d1	IC37	d1	ACE ploidy2 100kb	0.25	2.0
+IC37_d1	IC37	d1	ACE ploidy2 500kb	0.16	2.0
+IC37_d1	IC37	d1	ACE ploidy2 1000kb	0.18	2.0
+IC37_d1	IC37	d1	Fragle	0.3728758430480957	
+IC37_d0p1	IC37	d0p1	ichorCNA 1000kb_lowTF	0.2564	1.757
+IC37_d0p1	IC37	d0p1	ichorCNA 1000kb_default	0.2275	2.602
+IC37_d0p1	IC37	d0p1	ichorCNA 500kb_default	0.2277	2.642
+IC37_d0p1	IC37	d0p1	ACE ploidy2 100kb	0.18	2.0
+IC37_d0p1	IC37	d0p1	ACE ploidy2 500kb	0.14	2.0
+IC37_d0p1	IC37	d0p1	ACE ploidy2 1000kb	0.14	2.0
+IC37_d0p1	IC37	d0p1	Fragle	0.2907897253036499	
+IH03_full	IH03	full	ichorCNA 1000kb_lowTF	0.004152	1.934
+IH03_full	IH03	full	ichorCNA 1000kb_default	0.009676	2.114
+IH03_full	IH03	full	ichorCNA 500kb_default	0.01325	2.8
+IH03_full	IH03	full	ACE ploidy2 100kb	0.09	2.0
+IH03_full	IH03	full	ACE ploidy2 500kb	0.05	2.0
+IH03_full	IH03	full	ACE ploidy2 1000kb	0.05	2.0
+IH03_full	IH03	full	Fragle	0.2697477960586548	
+IH03_d0p1	IH03	d0p1	ichorCNA 1000kb_lowTF	0.01217	2.002
+IH03_d0p1	IH03	d0p1	ichorCNA 1000kb_default	0.01129	2.304
+IH03_d0p1	IH03	d0p1	ichorCNA 500kb_default	0.02478	2.256
+IH03_d0p1	IH03	d0p1	ACE ploidy2 100kb	0.08	2.0
+IH03_d0p1	IH03	d0p1	ACE ploidy2 500kb	0.05	2.0
+IH03_d0p1	IH03	d0p1	ACE ploidy2 1000kb	0.05	2.0
+IH03_d0p1	IH03	d0p1	Fragle	0.2712077283859253	

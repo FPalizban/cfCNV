@@ -37,6 +37,7 @@ def inter(A, B):
 
 
 ap = argparse.ArgumentParser(); ap.add_argument("new"); ap.add_argument("paper"); ap.add_argument("--map", nargs="+", required=True)
+ap.add_argument("--tf", help="workflow summary/tumour_fraction.tsv"); ap.add_argument("--paper-tf", help="paper tumour-fraction table")
 a = ap.parse_args()
 N = pd.read_csv(a.new, sep="\t", dtype={"chrom": str}); P = pd.read_csv(a.paper, sep="\t", dtype={"chrom": str})
 for d in (N, P): d["chrom"] = d.chrom.str.replace("^chr", "", regex=True)
@@ -56,3 +57,21 @@ for pair in a.map:
         rows.append({"sample": ns, "paper_sample": ps, "tool": tool, "calls_workflow": len(n), "calls_paper": len(p),
                      "bp_jaccard": round(I / U, 3) if U else 1.0})
 print(pd.DataFrame(rows).to_string(index=False))
+
+# tumour fraction: same method and setting in the workflow and in the paper
+METHOD = {"ichorCNA 1Mb low-TF": "ichorCNA 1000kb_lowTF", "ACE ploidy 2 100kb": "ACE ploidy2 100kb", "Fragle raw WGS": "Fragle"}
+ok = all(r["bp_jaccard"] >= 0.95 for r in rows)
+if a.tf and a.paper_tf:
+    T = pd.read_csv(a.tf, sep="\t"); PT = pd.read_csv(a.paper_tf, sep="\t"); tr = []
+    for pair in a.map:
+        ns, ps = pair.split("=")
+        for m, pm in METHOD.items():
+            x = T[(T.sample_id == ns) & (T.method == m)]; y = PT[(PT.sample_id == ps) & (PT.method == pm)]
+            if len(x) and len(y):
+                d = abs(float(x.TF.iloc[0]) - float(y.TF.iloc[0]))
+                tr.append({"sample": ns, "method": m, "TF_workflow": round(float(x.TF.iloc[0]), 4),
+                           "TF_paper": round(float(y.TF.iloc[0]), 4), "abs_difference": round(d, 4)})
+                ok = ok and d <= 0.01
+    print("\nTumour fraction"); print(pd.DataFrame(tr).to_string(index=False))
+print("\nRESULT:", "SAME AS THE PAPER (calls bp_jaccard >= 0.95, tumour fraction within 0.01)" if ok
+      else "DIFFERENCES FOUND - send this table")

@@ -11,7 +11,7 @@ on:
         default: "1.0.0"
   push:
     branches: [main]
-    paths: ["containers/**"]
+    paths: ["containers/**", ".github/workflows/containers.yml"]
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -48,6 +48,21 @@ jobs:
             ghcr.io/${{ steps.n.outputs.owner }}/${{ matrix.image }}:latest
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      # Also publish a ready-made Singularity/Apptainer image (SIF) as tag <version>-sif, so HPC users can download
+      # it as one file (singularity pull oras://...) without unpacking layers on their cluster.
+      - name: Publish Singularity image (SIF)
+        env:
+          APPTAINER_DOCKER_USERNAME: ${{ github.actor }}
+          APPTAINER_DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          wget -q https://github.com/apptainer/apptainer/releases/download/v1.3.6/apptainer_1.3.6_amd64.deb
+          sudo apt-get update -q && sudo apt-get install -y -q ./apptainer_1.3.6_amd64.deb
+          export APPTAINER_TMPDIR=$RUNNER_TEMP
+          IMG=ghcr.io/${{ steps.n.outputs.owner }}/${{ matrix.image }}
+          apptainer build --disable-cache ${{ matrix.image }}.sif docker://$IMG:${{ steps.n.outputs.tag }}
+          echo "${{ secrets.GITHUB_TOKEN }}" | apptainer registry login --username ${{ github.actor }} --password-stdin oras://ghcr.io
+          apptainer push ${{ matrix.image }}.sif oras://$IMG:${{ steps.n.outputs.tag }}-sif
+          rm -f ${{ matrix.image }}.sif
 
   # BIC-seq2 is free for academic use only and its redistribution terms are not stated, so its image is
   # built here only to check the recipe; it is NOT pushed. Users build their own (assets/hpc/README_bicseq2.md).

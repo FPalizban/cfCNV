@@ -134,10 +134,17 @@ segmental duplications, ENCODE blacklist v2 and the hg38→hg19 chain (GRCh38 ca
 
 ## Running on an HPC
 
-`-profile singularity,slurm` works on most Slurm clusters; `conf/chop.config` is an example institutional profile
-(`-profile chop`). Set `NXF_SINGULARITY_CACHEDIR` to a large shared folder so images are downloaded once, start the
-run inside `screen`/`tmux` or as a small Slurm job, and add `-resume` to continue after an interruption.
-Resource limits: `--max_cpus`, `--max_memory`, `--max_time`.
+Ready-made Singularity/Apptainer images (`.sif`) are published next to the Docker images (tag `1.0.0-sif`). Download
+them once into a folder of your own and pass it with `--sif_dir`; nothing is unpacked on the cluster:
+
+```bash
+bash assets/hpc/pull_sif.sh /my/project/cfcnv_sif 1.0.0
+nextflow run FPalizban/cfCNV -r v1.0.0 -profile singularity,slurm --sif_dir /my/project/cfcnv_sif ...
+```
+
+`conf/chop.config` is an example institutional profile (`-profile chop`) that keeps every file (images, Nextflow's
+files, temporary files, work and results) inside the user's own project folder. Start the run as a small Slurm job
+and add `-resume` to continue after an interruption. Resource limits: `--max_cpus`, `--max_memory`, `--max_time`.
 
 ## Containers
 
