@@ -80,6 +80,7 @@ process ICHORCNA {
     """
     ${CHR_SNIPPET(fai)}
     E=\${ICHOR_DIR:-/opt/ichorCNA}/inst/extdata
+    mkdir -p ichor_out
     readCounter --window ${W * 1000} --quality 20 --chromosome "\$CHRSX" ${bam} > ${meta.id}.wig
     Rscript \${ICHOR_DIR:-/opt/ichorCNA}/scripts/runIchorCNA.R --id ${meta.id} --WIG ${meta.id}.wig \\
         --gcWig \$E/gc_${hg}_${W}kb.wig --mapWig \$E/map_${hg}_${W}kb.wig --centromere \$E/${cent} \\
