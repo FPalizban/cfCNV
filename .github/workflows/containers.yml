@@ -66,7 +66,9 @@ jobs:
 
   # BIC-seq2 is free for academic use only and its redistribution terms are not stated, so its image is
   # built here only to check the recipe; it is NOT pushed. Users build their own (assets/hpc/README_bicseq2.md).
+  # Runs only when started by hand (its download site is currently offline).
   check-bicseq2-recipe:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     continue-on-error: true      # depends on the BIC-seq site being reachable
     steps:

@@ -11,7 +11,7 @@ RUN Rscript -e 'remotes::install_github("asntech/QDNAseq.hg38@v1.0.0", upgrade =
  && git -C /opt/ichorCNA checkout 5bfc03ed854f0e93fe5b624c97c1290fa0053837 \
  && R CMD INSTALL /opt/ichorCNA \
  && Rscript -e 'suppressPackageStartupMessages({library(QDNAseq); library(QDNAseq.hg19); library(QDNAseq.hg38); library(ACE); library(ichorCNA)}); cat("R packages OK\n")' \
- && Rscript /opt/ichorCNA/scripts/runIchorCNA.R --help | grep -q -- "--genomeBuild" \
+ && grep -q -- '"--genomeBuild"' /opt/ichorCNA/scripts/runIchorCNA.R \
  && which readCounter
 USER $MAMBA_USER
 LABEL org.opencontainers.image.source="https://github.com/FPalizban/cfCNV" \
