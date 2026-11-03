@@ -46,7 +46,7 @@ export NXF_HOME=$RUN/nxf_home NXF_TEMP=$RUN/tmp TMPDIR=$RUN/tmp NXF_SINGULARITY_
 export SINGULARITY_TMPDIR=$RUN/tmp APPTAINER_TMPDIR=$RUN/tmp SINGULARITY_CACHEDIR=$RUN/tmp APPTAINER_CACHEDIR=$RUN/tmp
 export JAVA_HOME=$JH PATH=$JH/bin:\$PATH NXF_OPTS='-Xms1g -Xmx4g'
 module load singularity/4.4.1 2>/dev/null || true
-$NF run FPalizban/cfCNV -r main -profile chop -w $RUN/work \\
+$NF run FPalizban/cfCNV -r main -profile chop -w $RUN/work -resume \\
     --input $RUN/samples.csv --outdir $RUN/results --genome GRCh37 \\
     --fasta $P/02_reference/GRCh37/fasta/human_g1k_v37.fasta \\
     --bicseq2_resources $P/06_tools/BICseq2_resources/GRCh37_101mer --bicseq2_map_prefix human_g1k_v37.101mer

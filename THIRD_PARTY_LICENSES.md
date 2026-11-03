@@ -12,7 +12,7 @@ every packaged tool remain available at the link given.
 | QDNAseq, QDNAseq.hg19 (Bioconductor) | GPL | image `cfcnv-r` (Bioconda) | |
 | QDNAseq.hg38 (github.com/asntech/QDNAseq.hg38, v1.0.0) | GPL-3 | image `cfcnv-r` | |
 | ACE (Bioconductor) | GPL-2 | image `cfcnv-r` (Bioconda) | |
-| ichorCNA v0.2.0 (github.com/broadinstitute/ichorCNA) | GPL-3 | image `cfcnv-r` | includes its panels of normals |
+| ichorCNA 0.3.2, commit 5bfc03e (github.com/broadinstitute/ichorCNA) | GPL-3 | image `cfcnv-r` | includes its panels of normals |
 | HMMcopy / readCounter | GPL-3 | image `cfcnv-r` (Bioconda) | |
 | CNVkit 0.9.10 | Apache-2.0 | image `cfcnv-cnvkit` (Bioconda) | |
 | Spectre 0.2.1 (github.com/fritzsedlazeck/Spectre) | MIT | image `cfcnv-spectre` | |

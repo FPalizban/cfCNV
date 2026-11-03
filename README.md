@@ -80,7 +80,7 @@ With GRCh37 sizes, the truth generator reproduces the published Simulation 1 tru
 | Tool | Version | Setting used (default) | Option |
 |---|---|---|---|
 | QDNAseq | 1.34 (+ QDNAseq.hg19 / .hg38) | 100-kb bins, CBS, `callBins` | `--qdnaseq_bins_kb 100` (comma list allowed) |
-| ichorCNA | 0.2.0 | 1-Mb windows, low-tumour-fraction settings (normal 0.95–0.999, ploidy 2, no subclones) | `--ichor_modes lowTF,default` |
+| ichorCNA | 0.3.2 (commit 5bfc03e) | 1-Mb windows, low-tumour-fraction settings (normal 0.95–0.999, ploidy 2, no subclones) | `--ichor_modes lowTF,default` |
 | BIC-seq2 | norm 0.2.4 / seg 0.7.2 | 10-kb bins, λ = 2, call when \|log2\| ≥ 0.2 | `--bicseq2_bin`, `--bicseq2_lambda`, `--bicseq2_log2_threshold` |
 | CNVkit | 0.9.10 | WGS mode, 30-kb bins, flat reference (pooled if normals are given) | `--cnvkit_bin`, `--cnvkit_normals 'n1.bam,n2.bam'` |
 | Spectre | 0.2.1 | mosdepth 100-kb coverage, `--cancer`, min. CNV length max(bin, 50 kb) | `--spectre_bin`, `--blacklist` |
